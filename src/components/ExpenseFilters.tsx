@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { CATEGORY_LABELS, STATUS_LABELS } from "@/lib/format";
 
 type UserOption = { id: string; name: string };
@@ -18,6 +21,9 @@ type Props = {
 };
 
 export function ExpenseFilters({ isAdmin, users, values, resultCount }: Props) {
+  const [from, setFrom] = useState(values.from);
+  const [to, setTo] = useState(values.to);
+
   const hasFilters = Boolean(
     values.q || values.status || values.category || values.userId || values.from || values.to,
   );
@@ -95,25 +101,30 @@ export function ExpenseFilters({ isAdmin, users, values, resultCount }: Props) {
           </label>
         )}
 
-        <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-muted">Da data</span>
-          <input
-            type="date"
-            name="from"
-            defaultValue={values.from}
-            className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none ring-brand focus:ring-2"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-muted">A data</span>
-          <input
-            type="date"
-            name="to"
-            defaultValue={values.to}
-            className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none ring-brand focus:ring-2"
-          />
-        </label>
+        <div className="grid grid-cols-2 gap-3 sm:col-span-2">
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-muted">Data da</span>
+            <input
+              type="date"
+              name="from"
+              value={from}
+              max={to || undefined}
+              onChange={(e) => setFrom(e.target.value)}
+              className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none ring-brand focus:ring-2"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-muted">Data a</span>
+            <input
+              type="date"
+              name="to"
+              value={to}
+              min={from || undefined}
+              onChange={(e) => setTo(e.target.value)}
+              className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none ring-brand focus:ring-2"
+            />
+          </label>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 pt-1">

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatDate, formatMoney, CATEGORY_LABELS } from "@/lib/format";
+import { formatDate, formatMoney, CATEGORY_LABELS, dayRangeFromInputs } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ExpenseFilters } from "@/components/ExpenseFilters";
 
@@ -54,12 +54,14 @@ export default async function ExpensesPage({ searchParams }: Props) {
   }
 
   if (from || to) {
-    const range: Prisma.DateTimeFilter = {};
-    if (from) range.gte = new Date(`${from}T00:00:00.000Z`);
-    if (to) range.lte = new Date(`${to}T23:59:59.999Z`);
-
+    const range = dayRangeFromInputs(from, to);
     andFilters.push({
-      OR: [{ expenseDate: range }, { expenseDate: null, createdAt: range }],
+      OR: [
+        { expenseDate: range },
+        {
+          AND: [{ expenseDate: null }, { createdAt: range }],
+        },
+      ],
     });
   }
 
