@@ -35,6 +35,7 @@ Compila in `.env`:
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://[PROJECT-REF].supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Settings → API Keys → `service_role` / secret |
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) |
+| `GOOGLE_MAPS_API_KEY` | Google Cloud → abilita **Distance Matrix API** (calcolo km) |
 | `SESSION_SECRET` | Stringa lunga casuale |
 
 ### 3. Installazione

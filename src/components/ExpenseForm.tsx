@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORY_LABELS, formatMoney } from "@/lib/format";
 import {
+  DEFAULT_MILEAGE_RATE,
   calcMileageAmount,
   isMileageExpense,
   mileageMerchant,
 } from "@/lib/mileage";
 import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
+import { CalculateDistanceButton } from "@/components/CalculateDistanceButton";
 
 export type ExpenseFormValues = {
   id: string;
@@ -54,6 +56,7 @@ export function ExpenseForm({
   const mileage = isMileageExpense(expense);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [roundTrip, setRoundTrip] = useState(false);
   const [form, setForm] = useState({
     merchant: expense.merchant || "",
     amount: expense.amount?.toString() || "",
@@ -66,7 +69,7 @@ export function ExpenseForm({
     documentNumber: expense.documentNumber || "",
     taxId: expense.taxId || "",
     km: expense.km?.toString() || "",
-    ratePerKm: expense.ratePerKm?.toString() || "",
+    ratePerKm: String(DEFAULT_MILEAGE_RATE),
     routeFrom: expense.routeFrom || "",
     routeTo: expense.routeTo || "",
   });
@@ -100,8 +103,8 @@ export function ExpenseForm({
     setForm((prev) => {
       const next = { ...prev, ...patch };
       const km = Number(next.km);
-      const rate = Number(next.ratePerKm);
-      const amount = calcMileageAmount(km, rate);
+      next.ratePerKm = String(DEFAULT_MILEAGE_RATE);
+      const amount = calcMileageAmount(km, DEFAULT_MILEAGE_RATE);
       if (amount != null) next.amount = amount.toFixed(2);
       next.merchant = mileageMerchant(next.routeFrom, next.routeTo);
       next.category = "chilometrico";
@@ -110,10 +113,11 @@ export function ExpenseForm({
   }
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
-    if (mileage && (key === "km" || key === "ratePerKm" || key === "routeFrom" || key === "routeTo")) {
-      updateMileageFields({ [key]: value } as Partial<typeof form>);
+    if (mileage && (key === "routeFrom" || key === "routeTo")) {
+      updateMileageFields({ [key]: value, km: "" } as Partial<typeof form>);
       return;
     }
+    if (mileage && key === "ratePerKm") return;
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -136,8 +140,7 @@ export function ExpenseForm({
           documentNumber: mileage ? null : form.documentNumber || null,
           taxId: mileage ? null : form.taxId || null,
           km: mileage && form.km ? Number(form.km) : mileage ? null : undefined,
-          ratePerKm:
-            mileage && form.ratePerKm ? Number(form.ratePerKm) : mileage ? null : undefined,
+          ratePerKm: mileage ? DEFAULT_MILEAGE_RATE : undefined,
           routeFrom: mileage ? form.routeFrom || null : undefined,
           routeTo: mileage ? form.routeTo || null : undefined,
           status: options?.status,
@@ -269,26 +272,39 @@ export function ExpenseForm({
                   onChange={(e) => update("routeTo", e.target.value)}
                 />
               </label>
+              <CalculateDistanceButton
+                from={form.routeFrom}
+                to={form.routeTo}
+                roundTrip={roundTrip}
+                onRoundTripChange={setRoundTrip}
+                onError={(message) => setError(message || null)}
+                onResult={(result) => {
+                  updateMileageFields({
+                    km: String(result.km),
+                    routeFrom: result.origin || form.routeFrom,
+                    routeTo: result.destination || form.routeTo,
+                  });
+                  setError(null);
+                }}
+              />
               <label className="block">
-                <span className="mb-1 block text-sm text-muted">Km</span>
+                <span className="mb-1 block text-sm text-muted">Km (Google Maps)</span>
                 <input
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
-                  value={form.km}
-                  onChange={(e) => update("km", e.target.value)}
+                  type="text"
+                  readOnly
+                  value={form.km ? form.km.replace(".", ",") : ""}
+                  placeholder="Usa «Calcola km con Google Maps»"
+                  className="w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink"
                 />
               </label>
               <label className="block">
                 <span className="mb-1 block text-sm text-muted">Tariffa €/km</span>
                 <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
-                  value={form.ratePerKm}
-                  onChange={(e) => update("ratePerKm", e.target.value)}
+                  type="text"
+                  readOnly
+                  value="0,30"
+                  className="w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink"
+                  aria-label="Tariffa chilometrica fissa 0,30 euro"
                 />
               </label>
               <label className="block sm:col-span-2">

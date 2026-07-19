@@ -70,7 +70,8 @@ export async function POST(request: Request) {
 
 async function createMileageExpense(userId: string, raw: unknown) {
   const body = mileageSchema.parse(raw);
-  const ratePerKm = body.ratePerKm ?? DEFAULT_MILEAGE_RATE;
+  // Tariffa aziendale fissa (ignora eventuali override client)
+  const ratePerKm = DEFAULT_MILEAGE_RATE;
   const amount = calcMileageAmount(body.km, ratePerKm);
   if (amount == null || amount <= 0) {
     return NextResponse.json({ error: "Chilometri o tariffa non validi" }, { status: 400 });

@@ -1,5 +1,5 @@
-/** Tariffa default €/km (modificabile nel form). */
-export const DEFAULT_MILEAGE_RATE = 0.42;
+/** Tariffa aziendale €/km (fissa, non editabile in UI). */
+export const DEFAULT_MILEAGE_RATE = 0.3;
 
 export function calcMileageAmount(km: number, ratePerKm: number) {
   if (!Number.isFinite(km) || !Number.isFinite(ratePerKm) || km < 0 || ratePerKm < 0) {
