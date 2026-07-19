@@ -4,10 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { LoginPicker } from "@/components/LoginPicker";
 
 function dbDiagnostics() {
-  const dbUrl = process.env.DATABASE_URL || "";
+  const dbUrl = (process.env.DATABASE_URL || "").trim();
+  const preview =
+    dbUrl.length === 0
+      ? "(vuota)"
+      : `${dbUrl.slice(0, 24)}…${dbUrl.slice(-12)} (len=${dbUrl.length})`;
+
   try {
     const url = new URL(dbUrl);
     return {
+      preview,
       host: url.host || "(vuoto)",
       username: decodeURIComponent(url.username || "(vuoto)"),
       hasPooler: dbUrl.includes("pooler.supabase.com"),
@@ -15,6 +21,7 @@ function dbDiagnostics() {
     };
   } catch {
     return {
+      preview,
       host: "(DATABASE_URL non valida)",
       username: "(n/d)",
       hasPooler: false,
@@ -60,6 +67,9 @@ export default async function LoginPage() {
         <h1 className="brand-title text-4xl">IC Green Power</h1>
         <p className="brand-subtitle mt-4 text-base">Errore di connessione al database.</p>
         <div className="mt-4 space-y-2 rounded-xl border border-white/50 bg-white/90 p-4 text-sm text-ink">
+          <p className="break-all">
+            <strong>Preview env:</strong> {diag.preview}
+          </p>
           <p>
             <strong>Host:</strong> {diag.host}
           </p>
