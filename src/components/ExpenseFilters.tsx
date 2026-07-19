@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CATEGORY_LABELS, STATUS_LABELS } from "@/lib/format";
 import {
   expenseFiltersToSearchParams,
@@ -33,6 +33,11 @@ export function ExpenseFilters({
   const [from, setFrom] = useState(values.from);
   const [to, setTo] = useState(values.to);
 
+  useEffect(() => {
+    setFrom(values.from);
+    setTo(values.to);
+  }, [values.from, values.to]);
+
   const hasFilters = Boolean(
     values.q || values.status || values.category || values.userId || values.from || values.to,
   );
@@ -49,11 +54,25 @@ export function ExpenseFilters({
       action={basePath}
       className="space-y-3 rounded-xl border border-line bg-white/80 p-4 backdrop-blur-sm"
     >
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <p className="text-sm font-semibold text-ink">Filtri</p>
-        <p className="text-xs text-muted">
-          {resultCount} risultat{resultCount === 1 ? "o" : "i"}
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <p className="text-sm font-semibold text-ink">Filtri</p>
+          <p className="text-xs text-muted">
+            {resultCount} risultat{resultCount === 1 ? "o" : "i"}
+            {hasFilters ? " · filtro attivo" : ""}
+          </p>
+        </div>
+        <Link
+          href={basePath}
+          aria-disabled={!hasFilters}
+          className={`rounded-md border px-3 py-1.5 text-sm font-semibold ${
+            hasFilters
+              ? "border-brand/40 bg-brand-soft/60 text-brand-deep hover:border-brand hover:bg-brand-soft"
+              : "pointer-events-none border-line bg-white text-muted opacity-50"
+          }`}
+        >
+          Reset filtri
+        </Link>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -147,7 +166,7 @@ export function ExpenseFilters({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 pt-1">
+      <div className="flex flex-wrap items-center gap-2 pt-1">
         <button
           type="submit"
           className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-deep"
@@ -160,14 +179,16 @@ export function ExpenseFilters({
         >
           Esporta CSV ({resultCount})
         </a>
-        {hasFilters && (
-          <Link
-            href={basePath}
-            className="rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-muted hover:border-brand hover:text-brand-deep"
-          >
-            Reset
-          </Link>
-        )}
+        <Link
+          href={basePath}
+          className={`rounded-md border px-4 py-2 text-sm font-semibold ${
+            hasFilters
+              ? "border-brand/40 bg-white text-brand-deep hover:border-brand hover:bg-brand-soft/50"
+              : "border-line bg-white text-muted hover:border-line"
+          }`}
+        >
+          Reset
+        </Link>
       </div>
     </form>
   );

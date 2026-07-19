@@ -9,6 +9,8 @@ import {
 } from "@/lib/expense-filters";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ExpenseFilters } from "@/components/ExpenseFilters";
+import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
+import { QuickApproveButton } from "@/components/QuickApproveButton";
 
 type Props = {
   searchParams: Promise<ExpenseFilterParams>;
@@ -95,7 +97,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
                 )}
                 <th className="px-4 py-3 font-medium">Categoria</th>
                 <th className="px-4 py-3 font-medium">Importo</th>
+                <th className="px-4 py-3 font-medium">AI</th>
                 <th className="px-4 py-3 font-medium">Stato</th>
+                {user.role === "admin" && (
+                  <th className="px-4 py-3 font-medium">Azione</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -123,8 +129,20 @@ export default async function ExpensesPage({ searchParams }: Props) {
                     {formatMoney(expense.amount, expense.currency)}
                   </td>
                   <td className="px-4 py-3">
+                    <AiConfidenceBadge value={expense.aiConfidence} />
+                  </td>
+                  <td className="px-4 py-3">
                     <StatusBadge status={expense.status} />
                   </td>
+                  {user.role === "admin" && (
+                    <td className="px-4 py-3">
+                      {expense.status === "submitted" ? (
+                        <QuickApproveButton expenseId={expense.id} />
+                      ) : (
+                        <span className="text-xs text-muted">—</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

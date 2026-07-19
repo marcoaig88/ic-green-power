@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import {
   CATEGORY_LABELS,
   STATUS_LABELS,
-  formatDate,
   formatMoney,
 } from "@/lib/format";
 import {
@@ -14,9 +13,9 @@ import {
   parseExpenseFilters,
   type ExpenseFilterParams,
 } from "@/lib/expense-filters";
-import { StatusBadge } from "@/components/StatusBadge";
 import { ExpenseFilters } from "@/components/ExpenseFilters";
 import { DashboardCharts } from "@/components/DashboardCharts";
+import { PendingApprovals } from "@/components/PendingApprovals";
 
 export const dynamic = "force-dynamic";
 
@@ -99,7 +98,17 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
       where: {
         AND: [where, { status: "submitted" }],
       },
-      include: { user: { select: { name: true } } },
+      select: {
+        id: true,
+        merchant: true,
+        amount: true,
+        currency: true,
+        expenseDate: true,
+        createdAt: true,
+        aiConfidence: true,
+        status: true,
+        user: { select: { name: true } },
+      },
       orderBy: { createdAt: "desc" },
       take: 8,
     }),
@@ -319,36 +328,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
             Vedi tutte →
           </Link>
         </div>
-        {pending.length === 0 ? (
-          <p className="text-sm text-muted">Nessuna spesa in attesa. Ottimo lavoro.</p>
-        ) : (
-          <ul className="divide-y divide-line/70">
-            {pending.map((expense) => (
-              <li
-                key={expense.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-3"
-              >
-                <div>
-                  <Link
-                    href={`/expenses/${expense.id}`}
-                    className="font-semibold text-ink hover:text-brand"
-                  >
-                    {expense.merchant || "Da completare"}
-                  </Link>
-                  <p className="text-xs text-muted">
-                    {expense.user.name} · {formatDate(expense.expenseDate || expense.createdAt)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-medium">
-                    {formatMoney(expense.amount, expense.currency)}
-                  </span>
-                  <StatusBadge status={expense.status} />
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <PendingApprovals expenses={pending} />
       </section>
     </div>
   );

@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { saveUpload } from "@/lib/files";
-import { extractReceiptFromFile } from "@/lib/extract-receipt";
+import {
+  extractReceiptFromFile,
+  normalizeConfidence,
+} from "@/lib/extract-receipt";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -81,7 +84,7 @@ export async function POST(request: Request) {
         description: extraction?.description ?? null,
         documentNumber: extraction?.documentNumber ?? null,
         aiRawJson: extraction ? JSON.stringify(extraction) : null,
-        aiConfidence: extraction?.confidence ?? null,
+        aiConfidence: normalizeConfidence(extraction?.confidence),
         fileName: saved.originalName,
         fileMimeType: saved.mimeType,
         filePath: saved.relativePath,

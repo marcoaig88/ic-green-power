@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORY_LABELS } from "@/lib/format";
+import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
 
 export type ExpenseFormValues = {
   id: string;
@@ -164,11 +165,10 @@ export function ExpenseForm({
           </p>
         </div>
 
-        {expense.aiConfidence != null && (
-          <p className="text-sm text-muted">
-            Confidenza AI: {Math.round(expense.aiConfidence * 100)}%
-          </p>
-        )}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted">Confidenza AI</span>
+          <AiConfidenceBadge value={expense.aiConfidence} />
+        </div>
 
         {aiError && (
           <p className="rounded-md border border-warn/40 bg-[#fff8e8] px-3 py-2 text-sm text-warn">

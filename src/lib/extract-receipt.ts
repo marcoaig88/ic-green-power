@@ -27,6 +27,13 @@ export const receiptSchema = z.object({
 
 export type ReceiptExtraction = z.infer<typeof receiptSchema>;
 
+/** Salva sempre confidenza in scala 0–1. */
+export function normalizeConfidence(value: number | null | undefined): number | null {
+  if (value == null || Number.isNaN(value)) return null;
+  const unit = value > 1 ? value / 100 : value;
+  return Math.max(0, Math.min(1, unit));
+}
+
 const EXTRACTION_PROMPT = `Sei un assistente per note spese aziendali italiane.
 Analizza lo scontrino, la ricevuta o la fattura (immagine o PDF) ed estrai i dati.
 Regole:
@@ -155,7 +162,11 @@ function parseExtraction(text: string): ReceiptExtraction {
   }
 
   try {
-    return receiptSchema.parse(parsed);
+    const data = receiptSchema.parse(parsed);
+    return {
+      ...data,
+      confidence: normalizeConfidence(data.confidence),
+    };
   } catch (error) {
     console.error("Raw AI response (schema failed):", parsed);
     throw new Error(
