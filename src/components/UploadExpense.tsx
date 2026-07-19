@@ -1,14 +1,37 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
+
+const ACCEPTED = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]);
 
 export function UploadExpense() {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
+
+  function pickFile(next: File | null | undefined) {
+    if (!next) return;
+    if (!ACCEPTED.has(next.type)) {
+      setError("Formato non supportato. Usa JPG, PNG, WEBP o PDF.");
+      return;
+    }
+    if (next.size > 10 * 1024 * 1024) {
+      setError("File troppo grande (max 10MB).");
+      return;
+    }
+    setError(null);
+    setFile(next);
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,18 +72,59 @@ export function UploadExpense() {
         </p>
       </div>
 
-      <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line bg-white/60 px-6 py-12 text-center transition hover:border-brand hover:bg-brand-soft/40">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => inputRef.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragging(true);
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragging(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragging(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragging(false);
+          pickFile(e.dataTransfer.files?.[0]);
+        }}
+        className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-6 py-12 text-center transition ${
+          dragging
+            ? "border-brand bg-brand-soft/70"
+            : "border-line bg-white/60 hover:border-brand hover:bg-brand-soft/40"
+        }`}
+      >
         <span className="font-medium text-brand-deep">
-          {file ? file.name : "Trascina o seleziona foto / PDF"}
+          {file
+            ? file.name
+            : dragging
+              ? "Rilascia il file qui"
+              : "Trascina o seleziona foto / PDF"}
         </span>
         <span className="text-sm text-muted">JPG, PNG, WEBP o PDF · max 10MB</span>
         <input
+          ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp,application/pdf"
           className="sr-only"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          onChange={(e) => pickFile(e.target.files?.[0])}
         />
-      </label>
+      </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {hint && <p className="text-sm text-warn">{hint}</p>}
