@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         String    @default("employee") // employee | admin
+  createdAt    DateTime  @default(now())
+  expenses     Expense[]
+}
+
+model Expense {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchant       String?
+  amount         Float?
+  currency       String    @default("EUR")
+  expenseDate    DateTime?
+  vatAmount      Float?
+  vatRate        Float?
+  category       String?
+  description    String?
+  documentNumber String?
+  status         String    @default("draft") // draft | submitted | approved | rejected
+  aiRawJson      String?
+  aiConfidence   Float?
+  fileName       String?
+  fileMimeType   String?
+  filePath       String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}

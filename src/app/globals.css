@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #eef6ef;
+  --bg-accent: #dcecdc;
+  --ink: #142018;
+  --muted: #4f6354;
+  --line: #b9cbb8;
+  --brand: #1f6b3a;
+  --brand-deep: #144928;
+  --brand-soft: #d7ebdd;
+  --warn: #9a6b12;
+  --danger: #9b2c2c;
+  --surface: rgba(255, 255, 255, 0.88);
+  --sun: #f2c14e;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-accent: var(--bg-accent);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-soft: var(--brand-soft);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-surface: var(--surface);
+  --font-sans: var(--font-outfit);
+  --font-display: var(--font-syne);
+}
+
+body {
+  position: relative;
+  min-height: 100vh;
+  color: var(--ink);
+  background-color: #1a2e24;
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  isolation: isolate;
+}
+
+.font-display {
+  font-family: var(--font-syne), var(--font-outfit), sans-serif;
+}
+
+/* Brand tipografia: massimo contrasto sulla foto */
+.brand-title {
+  font-family: var(--font-syne), sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: #ffffff;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.55),
+    0 8px 28px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(0, 0, 0, 0.25);
+}
+
+.brand-title--ink {
+  color: #0d2a18;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.85),
+    0 2px 12px rgba(255, 255, 255, 0.55);
+}
+
+.brand-subtitle {
+  font-family: var(--font-outfit), sans-serif;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+}
+
+.brand-subtitle--ink {
+  color: #1a3d28;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Foto realistica pannelli fotovoltaici a pieno schermo */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    url("/solar-bg.jpg") center center / cover no-repeat;
+  transform: scale(1.02);
+  animation: bg-drift 28s ease-in-out infinite alternate;
+}
+
+/* Velo per leggibilità: foto visibile, testo chiaro */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(10, 28, 18, 0.35) 0%,
+      rgba(236, 245, 236, 0.55) 38%,
+      rgba(244, 250, 242, 0.82) 100%
+    ),
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 210, 90, 0.18), transparent 60%);
+}
+
+@keyframes bg-drift {
+  from {
+    transform: scale(1.02) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.06) translate3d(-1.2%, -0.8%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before {
+    animation: none;
+    transform: none;
+  }
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
