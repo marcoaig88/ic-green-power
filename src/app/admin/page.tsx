@@ -195,7 +195,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         basePath="/admin"
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Kpi
           label={filtered ? "Totale filtrato" : "Totale mese"}
           value={formatMoney(filtered ? filteredTotal : monthAll)}
@@ -215,15 +215,6 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
           value={String(pendingCount)}
           hint={formatMoney(pendingTotal)}
           accent
-        />
-        <Kpi
-          label="Importo da approvare"
-          value={formatMoney(pendingTotal)}
-          hint={
-            pendingCount === 1
-              ? "1 spesa in coda"
-              : `${pendingCount} spese in coda`
-          }
         />
       </section>
 
