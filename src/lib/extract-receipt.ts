@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { z } from "zod";
 
 const nullableNumber = z.preprocess((value) => {
@@ -108,7 +108,7 @@ export async function extractReceiptFromFile(params: {
       responseMimeType: "application/json",
       responseSchema: RESPONSE_SCHEMA,
       thinkingConfig: {
-        thinkingLevel: "minimal",
+        thinkingLevel: ThinkingLevel.MINIMAL,
       },
     },
   });
