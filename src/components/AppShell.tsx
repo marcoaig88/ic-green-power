@@ -19,12 +19,13 @@ export function AppShell({ user, children }: Props) {
   }
 
   const nav = [
+    ...(user.role === "admin" ? [{ href: "/admin", label: "Dashboard" }] : []),
     { href: "/expenses", label: "Note spese" },
     { href: "/expenses/new", label: "Nuova spesa" },
   ];
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-6">
+    <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-6 sm:px-6">
       <header className="mb-8 rounded-2xl border border-white/50 bg-white/85 px-4 py-4 shadow-[0_10px_40px_rgba(10,40,20,0.12)] backdrop-blur-md sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -34,9 +35,11 @@ export function AppShell({ user, children }: Props) {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-4 text-sm">
-            <nav className="flex gap-3 font-semibold">
+            <nav className="flex flex-wrap gap-3 font-semibold">
               {nav.map((item) => {
-                const active = pathname === item.href;
+                const active =
+                  pathname === item.href ||
+                  (item.href !== "/expenses" && pathname.startsWith(item.href + "/"));
                 return (
                   <Link
                     key={item.href}
