@@ -1,72 +1,29 @@
 import Link from "next/link";
-import type { Prisma } from "@prisma/client";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatDate, formatMoney, CATEGORY_LABELS, dayRangeFromInputs } from "@/lib/format";
+import { formatDate, formatMoney, CATEGORY_LABELS } from "@/lib/format";
+import {
+  buildExpenseWhere,
+  parseExpenseFilters,
+  type ExpenseFilterParams,
+} from "@/lib/expense-filters";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ExpenseFilters } from "@/components/ExpenseFilters";
 
 type Props = {
-  searchParams: Promise<{
-    q?: string;
-    status?: string;
-    category?: string;
-    userId?: string;
-    from?: string;
-    to?: string;
-  }>;
+  searchParams: Promise<ExpenseFilterParams>;
 };
-
-const STATUSES = new Set(["draft", "submitted", "approved", "rejected"]);
-const CATEGORIES = new Set(Object.keys(CATEGORY_LABELS));
 
 export default async function ExpensesPage({ searchParams }: Props) {
   const user = await getSessionUser();
   if (!user) return null;
 
   const params = await searchParams;
-  const q = (params.q || "").trim();
-  const status = STATUSES.has(params.status || "") ? params.status! : "";
-  const category = CATEGORIES.has(params.category || "") ? params.category! : "";
-  const userId = params.userId || "";
-  const from = params.from || "";
-  const to = params.to || "";
-
-  const andFilters: Prisma.ExpenseWhereInput[] = [];
-
-  if (user.role !== "admin") {
-    andFilters.push({ userId: user.id });
-  } else if (userId) {
-    andFilters.push({ userId });
-  }
-
-  if (status) andFilters.push({ status });
-  if (category) andFilters.push({ category });
-
-  if (q) {
-    andFilters.push({
-      OR: [
-        { merchant: { contains: q, mode: "insensitive" } },
-        { description: { contains: q, mode: "insensitive" } },
-        { documentNumber: { contains: q, mode: "insensitive" } },
-      ],
-    });
-  }
-
-  if (from || to) {
-    const range = dayRangeFromInputs(from, to);
-    andFilters.push({
-      OR: [
-        { expenseDate: range },
-        {
-          AND: [{ expenseDate: null }, { createdAt: range }],
-        },
-      ],
-    });
-  }
-
-  const finalWhere: Prisma.ExpenseWhereInput =
-    andFilters.length > 0 ? { AND: andFilters } : {};
+  const filters = parseExpenseFilters(params);
+  const finalWhere = buildExpenseWhere(filters, {
+    role: user.role,
+    sessionUserId: user.id,
+  });
 
   const [expenses, teamUsers] = await Promise.all([
     prisma.expense.findMany({
@@ -105,7 +62,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
         isAdmin={user.role === "admin"}
         users={teamUsers}
         resultCount={expenses.length}
-        values={{ q, status, category, userId, from, to }}
+        values={filters}
       />
 
       {expenses.length === 0 ? (

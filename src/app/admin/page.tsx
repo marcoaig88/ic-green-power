@@ -7,9 +7,22 @@ import {
   formatDate,
   formatMoney,
 } from "@/lib/format";
+import {
+  buildExpenseWhere,
+  expenseFiltersToSearchParams,
+  hasActiveExpenseFilters,
+  parseExpenseFilters,
+  type ExpenseFilterParams,
+} from "@/lib/expense-filters";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ExpenseFilters } from "@/components/ExpenseFilters";
+import { DashboardCharts } from "@/components/DashboardCharts";
 
 export const dynamic = "force-dynamic";
+
+type Props = {
+  searchParams: Promise<ExpenseFilterParams>;
+};
 
 function startOfMonth(d = new Date()) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 0, 0, 0, 0));
@@ -19,14 +32,55 @@ function sumAmounts(rows: { amount: number | null }[]) {
   return rows.reduce((acc, row) => acc + (row.amount || 0), 0);
 }
 
-export default async function AdminDashboardPage() {
+function monthKey(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function buildMonthSeries(
+  expenses: { amount: number | null; expenseDate: Date | null; createdAt: Date }[],
+  monthsBack = 6,
+) {
+  const now = new Date();
+  const keys: string[] = [];
+  for (let i = monthsBack - 1; i >= 0; i -= 1) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    keys.push(monthKey(d));
+  }
+
+  const totals = new Map(keys.map((key) => [key, { total: 0, count: 0 }]));
+  for (const expense of expenses) {
+    const date = expense.expenseDate || expense.createdAt;
+    const key = monthKey(date);
+    const bucket = totals.get(key);
+    if (!bucket) continue;
+    bucket.total += expense.amount || 0;
+    bucket.count += 1;
+  }
+
+  const formatter = new Intl.DateTimeFormat("it-IT", { month: "short", year: "2-digit" });
+  return keys.map((key) => {
+    const [y, m] = key.split("-").map(Number);
+    const label = formatter.format(new Date(Date.UTC(y, m - 1, 1)));
+    const bucket = totals.get(key)!;
+    return { label, total: bucket.total, count: bucket.count };
+  });
+}
+
+export default async function AdminDashboardPage({ searchParams }: Props) {
   const user = await getSessionUser();
   if (!user) return null;
 
+  const filters = parseExpenseFilters(await searchParams);
+  const where = buildExpenseWhere(filters, {
+    role: user.role,
+    sessionUserId: user.id,
+  });
   const monthStart = startOfMonth();
+  const filtered = hasActiveExpenseFilters(filters);
 
   const [allExpenses, pending, team] = await Promise.all([
     prisma.expense.findMany({
+      where,
       select: {
         id: true,
         status: true,
@@ -42,7 +96,9 @@ export default async function AdminDashboardPage() {
       orderBy: { createdAt: "desc" },
     }),
     prisma.expense.findMany({
-      where: { status: "submitted" },
+      where: {
+        AND: [where, { status: "submitted" }],
+      },
       include: { user: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
       take: 8,
@@ -98,19 +154,30 @@ export default async function AdminDashboardPage() {
     };
   });
 
+  const byMonth = buildMonthSeries(allExpenses);
   const monthApproved = sumAmounts(
     monthExpenses.filter((e) => e.status === "approved"),
   );
   const monthAll = sumAmounts(monthExpenses);
   const pendingCount = byStatus.find((s) => s.status === "submitted")?.count || 0;
   const pendingTotal = byStatus.find((s) => s.status === "submitted")?.total || 0;
-  const maxCategory = Math.max(...byCategory.map((c) => c.total), 1);
-  const maxStatus = Math.max(...byStatus.map((s) => s.count), 1);
+  const filteredTotal = sumAmounts(allExpenses);
 
   const monthLabel = new Intl.DateTimeFormat("it-IT", {
     month: "long",
     year: "numeric",
   }).format(new Date());
+
+  const exportParams = expenseFiltersToSearchParams(filters).toString();
+  const exportHref = exportParams
+    ? `/api/expenses/export?${exportParams}`
+    : "/api/expenses/export";
+  const expensesListHref = exportParams ? `/expenses?${exportParams}` : "/expenses";
+  const pendingListParams = expenseFiltersToSearchParams({
+    ...filters,
+    status: "submitted",
+  }).toString();
+  const pendingListHref = `/expenses?${pendingListParams}`;
 
   return (
     <div className="space-y-8">
@@ -118,18 +185,26 @@ export default async function AdminDashboardPage() {
         <div>
           <h1 className="brand-title brand-title--ink text-3xl sm:text-4xl">Dashboard</h1>
           <p className="brand-subtitle brand-subtitle--ink mt-1 text-sm">
-            Panoramica note spese · {monthLabel}
+            {filtered
+              ? `Vista filtrata · ${allExpenses.length} spese · ${formatMoney(filteredTotal)}`
+              : `Panoramica note spese · ${monthLabel}`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <a
+            href={exportHref}
+            className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-semibold text-ink hover:border-brand"
+          >
+            Esporta CSV
+          </a>
           <Link
-            href="/expenses?status=submitted"
+            href={pendingListHref}
             className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-deep"
           >
             Da approvare ({pendingCount})
           </Link>
           <Link
-            href="/expenses"
+            href={expensesListHref}
             className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-semibold text-ink hover:border-brand"
           >
             Tutte le spese
@@ -137,8 +212,24 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
+      <ExpenseFilters
+        isAdmin
+        users={team.map((member) => ({ id: member.id, name: member.name }))}
+        resultCount={allExpenses.length}
+        values={filters}
+        basePath="/admin"
+      />
+
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Totale mese" value={formatMoney(monthAll)} hint="Tutte le spese del mese" />
+        <Kpi
+          label={filtered ? "Totale filtrato" : "Totale mese"}
+          value={formatMoney(filtered ? filteredTotal : monthAll)}
+          hint={
+            filtered
+              ? `${allExpenses.length} spese selezionate`
+              : "Tutte le spese del mese"
+          }
+        />
         <Kpi
           label="Approvato nel mese"
           value={formatMoney(monthApproved)}
@@ -153,74 +244,23 @@ export default async function AdminDashboardPage() {
         <Kpi
           label="Dipendenti"
           value={String(team.length)}
-          hint={`${allExpenses.length} spese totali`}
+          hint={`${allExpenses.length} spese in vista`}
         />
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-xl border border-line bg-white/80 p-5">
-          <h2 className="font-display text-lg font-bold text-brand-deep">Per stato</h2>
-          <ul className="mt-4 space-y-3">
-            {byStatus.map((row) => (
-              <li key={row.status}>
-                <div className="mb-1 flex items-center justify-between gap-3 text-sm">
-                  <Link
-                    href={`/expenses?status=${row.status}`}
-                    className="font-semibold text-ink hover:text-brand"
-                  >
-                    {row.label}
-                  </Link>
-                  <span className="text-muted">
-                    {row.count} · {formatMoney(row.total)}
-                  </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-bg-accent">
-                  <div
-                    className="h-full rounded-full bg-brand"
-                    style={{ width: `${(row.count / maxStatus) * 100}%` }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="rounded-xl border border-line bg-white/80 p-5">
-          <h2 className="font-display text-lg font-bold text-brand-deep">Per categoria</h2>
-          {byCategory.length === 0 ? (
-            <p className="mt-4 text-sm text-muted">Nessun dato ancora.</p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {byCategory.map((row) => (
-                <li key={row.key}>
-                  <div className="mb-1 flex items-center justify-between gap-3 text-sm">
-                    <Link
-                      href={`/expenses?category=${row.key}`}
-                      className="font-semibold text-ink hover:text-brand"
-                    >
-                      {row.label}
-                    </Link>
-                    <span className="text-muted">
-                      {row.count} · {formatMoney(row.total)}
-                    </span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-bg-accent">
-                    <div
-                      className="h-full rounded-full bg-brand-deep/80"
-                      style={{ width: `${(row.total / maxCategory) * 100}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+      <DashboardCharts
+        byStatus={byStatus}
+        byCategory={byCategory}
+        byEmployee={byEmployee}
+        byMonth={byMonth}
+      />
 
       <section className="rounded-xl border border-line bg-white/80 p-5">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
           <h2 className="font-display text-lg font-bold text-brand-deep">Per dipendente</h2>
-          <p className="text-xs text-muted">Totali complessivi e del mese corrente</p>
+          <p className="text-xs text-muted">
+            {filtered ? "Totali sul filtro attivo" : "Totali complessivi e del mese corrente"}
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
