@@ -32,10 +32,12 @@ export function ExpenseForm({
   expense,
   isAdmin,
   aiError,
+  queue,
 }: {
   expense: ExpenseFormValues;
   isAdmin: boolean;
   aiError?: string | null;
+  queue?: { ids: string[]; index: number } | null;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -52,11 +54,34 @@ export function ExpenseForm({
     documentNumber: expense.documentNumber || "",
   });
 
+  const inQueue = Boolean(queue && queue.ids.length > 0);
+  const isLastInQueue = inQueue && queue!.index >= queue!.ids.length - 1;
+
+  function goNextInQueue(removedId?: string) {
+    if (!queue) {
+      router.push("/expenses");
+      return;
+    }
+
+    const remaining = removedId
+      ? queue.ids.filter((id) => id !== removedId)
+      : queue.ids;
+    const nextIndex = removedId ? queue.index : queue.index + 1;
+
+    if (remaining.length === 0 || nextIndex >= remaining.length) {
+      router.push("/expenses");
+      return;
+    }
+
+    router.push(`/expenses/review?ids=${remaining.join(",")}&i=${removedId ? queue.index : nextIndex}`);
+    router.refresh();
+  }
+
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function save(nextStatus?: string) {
+  async function save(options?: { status?: string; advance?: boolean }) {
     setSaving(true);
     setError(null);
     try {
@@ -73,15 +98,24 @@ export function ExpenseForm({
           category: form.category || null,
           description: form.description || null,
           documentNumber: form.documentNumber || null,
-          status: nextStatus,
+          status: options?.status,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Salvataggio non riuscito");
-      router.refresh();
-      if (nextStatus === "submitted") {
-        router.push("/expenses");
+
+      if (options?.status === "submitted" || options?.advance) {
+        if (inQueue) {
+          goNextInQueue();
+          return;
+        }
+        if (options?.status === "submitted") {
+          router.push("/expenses");
+          return;
+        }
       }
+
+      router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Errore");
     } finally {
@@ -91,7 +125,8 @@ export function ExpenseForm({
 
   async function cancel() {
     if (expense.status !== "draft") {
-      router.push("/expenses");
+      if (inQueue) goNextInQueue();
+      else router.push("/expenses");
       return;
     }
 
@@ -104,8 +139,11 @@ export function ExpenseForm({
       const res = await fetch(`/api/expenses/${expense.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Annullamento non riuscito");
-      router.push("/expenses");
-      router.refresh();
+      if (inQueue) goNextInQueue(expense.id);
+      else {
+        router.push("/expenses");
+        router.refresh();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Errore");
       setSaving(false);
@@ -242,10 +280,24 @@ export function ExpenseForm({
             <button
               type="button"
               disabled={saving}
-              onClick={() => save("submitted")}
+              onClick={() => save({ status: "submitted" })}
               className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-deep disabled:opacity-60"
             >
-              Conferma e invia
+              {inQueue
+                ? isLastInQueue
+                  ? "Conferma e termina"
+                  : "Conferma e passa al prossimo"
+                : "Conferma e invia"}
+            </button>
+          )}
+          {inQueue && !isLastInQueue && expense.status === "draft" && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => save({ advance: true })}
+              className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-medium transition hover:border-brand disabled:opacity-60"
+            >
+              Salva e passa al prossimo
             </button>
           )}
           <button
@@ -254,14 +306,14 @@ export function ExpenseForm({
             onClick={cancel}
             className="rounded-md border border-danger/40 px-4 py-2 text-sm font-medium text-danger transition hover:border-danger hover:bg-[#fde8e8] disabled:opacity-60"
           >
-            Annulla
+            {inQueue ? "Annulla questo" : "Annulla"}
           </button>
           {isAdmin && expense.status === "submitted" && (
             <>
               <button
                 type="button"
                 disabled={saving}
-                onClick={() => save("approved")}
+                onClick={() => save({ status: "approved" })}
                 className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-deep disabled:opacity-60"
               >
                 Approva
@@ -269,7 +321,7 @@ export function ExpenseForm({
               <button
                 type="button"
                 disabled={saving}
-                onClick={() => save("rejected")}
+                onClick={() => save({ status: "rejected" })}
                 className="rounded-md border border-danger px-4 py-2 text-sm font-medium text-danger disabled:opacity-60"
               >
                 Rifiuta
