@@ -5,11 +5,22 @@ import { LoginPicker } from "@/components/LoginPicker";
 
 function dbDiagnostics() {
   const dbUrl = process.env.DATABASE_URL || "";
-  return {
-    host: dbUrl.split("@")[1]?.split("/")[0] || "(DATABASE_URL mancante)",
-    hasPooler: dbUrl.includes("pooler.supabase.com"),
-    hasPort6543: dbUrl.includes(":6543"),
-  };
+  try {
+    const url = new URL(dbUrl);
+    return {
+      host: url.host || "(vuoto)",
+      username: decodeURIComponent(url.username || "(vuoto)"),
+      hasPooler: dbUrl.includes("pooler.supabase.com"),
+      hasPort6543: url.port === "6543" || dbUrl.includes(":6543"),
+    };
+  } catch {
+    return {
+      host: "(DATABASE_URL non valida)",
+      username: "(n/d)",
+      hasPooler: false,
+      hasPort6543: false,
+    };
+  }
 }
 
 export default async function LoginPage() {
@@ -53,12 +64,22 @@ export default async function LoginPage() {
             <strong>Host:</strong> {diag.host}
           </p>
           <p>
+            <strong>Username:</strong> {diag.username}
+          </p>
+          <p>
             <strong>Pooler:</strong> {diag.hasPooler ? "sì" : "no"} ·{" "}
             <strong>Porta 6543:</strong> {diag.hasPort6543 ? "sì" : "no"}
           </p>
           <p className="break-words text-danger">
             <strong>Dettaglio:</strong> {message}
           </p>
+          {diag.username === "postgres" && (
+            <p className="text-warn">
+              Sul pooler lo username deve essere{" "}
+              <code>postgres.pfptyzithnemqoggtyww</code>, non solo{" "}
+              <code>postgres</code>.
+            </p>
+          )}
         </div>
       </div>
     );
