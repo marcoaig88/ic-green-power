@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
   const session = await getSessionUser();
-  if (session) redirect("/expenses");
+  if (session) redirect(session.role === "admin" ? "/admin" : "/expenses");
 
   try {
     const users = await prisma.user.findMany({

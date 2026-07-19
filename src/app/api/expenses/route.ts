@@ -83,6 +83,7 @@ export async function POST(request: Request) {
         category: extraction?.category ?? null,
         description: extraction?.description ?? null,
         documentNumber: extraction?.documentNumber ?? null,
+        taxId: extraction?.taxId ?? null,
         aiRawJson: extraction ? JSON.stringify(extraction) : null,
         aiConfidence: normalizeConfidence(extraction?.confidence),
         fileName: saved.originalName,

@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import {
-  CATEGORY_LABELS,
-  STATUS_LABELS,
-  formatMoney,
-} from "@/lib/format";
+import { STATUS_LABELS, formatMoney } from "@/lib/format";
 import {
   buildExpenseWhere,
   expenseFiltersToSearchParams,
@@ -110,7 +106,6 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         user: { select: { name: true } },
       },
       orderBy: { createdAt: "desc" },
-      take: 8,
     }),
     prisma.user.findMany({
       where: { role: "employee" },
@@ -131,35 +126,6 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
       label: STATUS_LABELS[status],
       count: rows.length,
       total: sumAmounts(rows),
-    };
-  });
-
-  const byCategoryMap = new Map<string, { count: number; total: number }>();
-  for (const expense of allExpenses) {
-    const key = expense.category || "altro";
-    const prev = byCategoryMap.get(key) || { count: 0, total: 0 };
-    byCategoryMap.set(key, {
-      count: prev.count + 1,
-      total: prev.total + (expense.amount || 0),
-    });
-  }
-  const byCategory = [...byCategoryMap.entries()]
-    .map(([key, value]) => ({
-      key,
-      label: CATEGORY_LABELS[key] || key,
-      ...value,
-    }))
-    .sort((a, b) => b.total - a.total);
-
-  const byEmployee = team.map((member) => {
-    const rows = allExpenses.filter((e) => e.userId === member.id);
-    const memberMonth = monthExpenses.filter((e) => e.userId === member.id);
-    return {
-      ...member,
-      count: rows.length,
-      total: sumAmounts(rows),
-      monthTotal: sumAmounts(memberMonth),
-      pending: rows.filter((e) => e.status === "submitted").length,
     };
   });
 
@@ -245,91 +211,45 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
           hint="Solo spese approvate"
         />
         <Kpi
-          label="In attesa"
+          label="Da approvare"
           value={String(pendingCount)}
           hint={formatMoney(pendingTotal)}
           accent
         />
         <Kpi
-          label="Dipendenti"
-          value={String(team.length)}
-          hint={`${allExpenses.length} spese in vista`}
+          label="Importo da approvare"
+          value={formatMoney(pendingTotal)}
+          hint={
+            pendingCount === 1
+              ? "1 spesa in coda"
+              : `${pendingCount} spese in coda`
+          }
         />
       </section>
 
-      <DashboardCharts
-        byStatus={byStatus}
-        byCategory={byCategory}
-        byEmployee={byEmployee}
-        byMonth={byMonth}
-      />
-
       <section className="rounded-xl border border-line bg-white/80 p-5">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-          <h2 className="font-display text-lg font-bold text-brand-deep">Per dipendente</h2>
-          <p className="text-xs text-muted">
-            {filtered ? "Totali sul filtro attivo" : "Totali complessivi e del mese corrente"}
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] text-left text-sm">
-            <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
-              <tr>
-                <th className="px-2 py-2 font-medium">Dipendente</th>
-                <th className="px-2 py-2 font-medium">Spese</th>
-                <th className="px-2 py-2 font-medium">In attesa</th>
-                <th className="px-2 py-2 font-medium">Totale</th>
-                <th className="px-2 py-2 font-medium">Mese</th>
-              </tr>
-            </thead>
-            <tbody>
-              {byEmployee.map((member) => (
-                <tr key={member.id} className="border-b border-line/70 last:border-0">
-                  <td className="px-2 py-3">
-                    <Link
-                      href={`/expenses?userId=${member.id}`}
-                      className="font-semibold hover:text-brand"
-                    >
-                      {member.name}
-                    </Link>
-                    <p className="text-xs text-muted">{member.email}</p>
-                  </td>
-                  <td className="px-2 py-3 text-muted">{member.count}</td>
-                  <td className="px-2 py-3">
-                    {member.pending > 0 ? (
-                      <Link
-                        href={`/expenses?userId=${member.id}&status=submitted`}
-                        className="font-semibold text-brand"
-                      >
-                        {member.pending}
-                      </Link>
-                    ) : (
-                      <span className="text-muted">0</span>
-                    )}
-                  </td>
-                  <td className="px-2 py-3 font-medium">{formatMoney(member.total)}</td>
-                  <td className="px-2 py-3 text-muted">{formatMoney(member.monthTotal)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-line bg-white/80 p-5">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-          <h2 className="font-display text-lg font-bold text-brand-deep">
-            In attesa di approvazione
-          </h2>
+          <div>
+            <h2 className="font-display text-lg font-bold text-brand-deep">
+              Da approvare
+            </h2>
+            <p className="mt-0.5 text-xs text-muted">
+              {pendingCount === 0
+                ? "Nessuna spesa in attesa"
+                : `${pendingCount} · ${formatMoney(pendingTotal)}`}
+            </p>
+          </div>
           <Link
-            href="/expenses?status=submitted"
+            href={pendingListHref}
             className="text-sm font-semibold text-brand hover:text-brand-deep"
           >
-            Vedi tutte →
+            Vedi in lista →
           </Link>
         </div>
         <PendingApprovals expenses={pending} />
       </section>
+
+      <DashboardCharts byStatus={byStatus} byMonth={byMonth} />
     </div>
   );
 }

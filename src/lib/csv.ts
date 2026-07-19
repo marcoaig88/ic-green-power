@@ -6,6 +6,7 @@ type CsvExpense = {
   merchant: string | null;
   description: string | null;
   documentNumber: string | null;
+  taxId: string | null;
   category: string | null;
   amount: number | null;
   currency: string;
@@ -41,6 +42,7 @@ export function expensesToCsv(expenses: CsvExpense[]) {
     "Aliquota IVA",
     "Stato",
     "N. documento",
+    "P.IVA / CF",
     "Descrizione",
   ];
 
@@ -60,6 +62,7 @@ export function expensesToCsv(expenses: CsvExpense[]) {
     cell(expense.vatRate != null ? `${expense.vatRate}%` : ""),
     cell(STATUS_LABELS[expense.status] || expense.status),
     cell(expense.documentNumber || ""),
+    cell(expense.taxId || ""),
     cell(expense.description || ""),
   ]);
 

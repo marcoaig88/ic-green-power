@@ -50,6 +50,7 @@ export function buildExpenseWhere(
         { merchant: { contains: filters.q, mode: "insensitive" } },
         { description: { contains: filters.q, mode: "insensitive" } },
         { documentNumber: { contains: filters.q, mode: "insensitive" } },
+        { taxId: { contains: filters.q, mode: "insensitive" } },
       ],
     });
   }

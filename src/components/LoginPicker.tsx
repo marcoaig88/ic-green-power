@@ -35,7 +35,8 @@ export function LoginPicker({ users }: { users: LoginUser[] }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login fallito");
-      router.push("/expenses");
+      const role = data.user?.role || user.role;
+      router.push(role === "admin" ? "/admin" : "/expenses");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore");

@@ -16,6 +16,7 @@ export type ExpenseFormValues = {
   category: string | null;
   description: string | null;
   documentNumber: string | null;
+  taxId: string | null;
   status: string;
   fileName: string | null;
   fileMimeType: string | null;
@@ -53,6 +54,7 @@ export function ExpenseForm({
     category: expense.category || "altro",
     description: expense.description || "",
     documentNumber: expense.documentNumber || "",
+    taxId: expense.taxId || "",
   });
 
   const inQueue = Boolean(queue && queue.ids.length > 0);
@@ -99,6 +101,7 @@ export function ExpenseForm({
           category: form.category || null,
           description: form.description || null,
           documentNumber: form.documentNumber || null,
+          taxId: form.taxId || null,
           status: options?.status,
         }),
       });
@@ -246,12 +249,21 @@ export function ExpenseForm({
               onChange={(e) => update("vatRate", e.target.value)}
             />
           </label>
-          <label className="block sm:col-span-2">
+          <label className="block">
             <span className="mb-1 block text-sm text-muted">N. documento</span>
             <input
               className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
               value={form.documentNumber}
               onChange={(e) => update("documentNumber", e.target.value)}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm text-muted">P.IVA / Codice fiscale</span>
+            <input
+              className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+              value={form.taxId}
+              onChange={(e) => update("taxId", e.target.value)}
+              placeholder="IT12345678901"
             />
           </label>
           <label className="block sm:col-span-2">
@@ -268,14 +280,16 @@ export function ExpenseForm({
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <div className="flex flex-wrap gap-3 pt-2">
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => save()}
-            className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-medium transition hover:border-brand disabled:opacity-60"
-          >
-            Salva bozza
-          </button>
+          {!(inQueue && !isLastInQueue && expense.status === "draft") && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => save()}
+              className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-medium transition hover:border-brand disabled:opacity-60"
+            >
+              Salva bozza
+            </button>
+          )}
           {expense.status === "draft" && (
             <button
               type="button"

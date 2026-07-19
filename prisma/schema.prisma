@@ -30,6 +30,7 @@ model Expense {
   category       String?
   description    String?
   documentNumber String?
+  taxId          String? // Partita IVA o Codice Fiscale del fornitore
   status         String    @default("draft") // draft | submitted | approved | rejected
   aiRawJson      String?
   aiConfidence   Float?

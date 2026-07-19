@@ -37,6 +37,7 @@ export default async function ExpenseDetailPage({ params, searchParams }: Props)
         category: expense.category,
         description: expense.description,
         documentNumber: expense.documentNumber,
+        taxId: expense.taxId,
         status: expense.status,
         fileName: expense.fileName,
         fileMimeType: expense.fileMimeType,

@@ -22,6 +22,7 @@ export const receiptSchema = z.object({
   category: z.string().nullable().optional().transform((v) => v ?? null),
   description: z.string().nullable().optional().transform((v) => v ?? null),
   documentNumber: z.string().nullable().optional().transform((v) => v ?? null),
+  taxId: z.string().nullable().optional().transform((v) => v ?? null),
   confidence: nullableNumber.optional().transform((v) => v ?? null),
 });
 
@@ -45,6 +46,8 @@ Regole:
 - vatRate = aliquota IVA percentuale (es. 22).
 - category = una tra: vitto, viaggio, alloggio, trasporto, materiale, software, altro.
 - description = breve riepilogo in italiano.
+- documentNumber = numero scontrino/fattura/ricevuta se presente (non la P.IVA).
+- taxId = Partita IVA o Codice Fiscale del fornitore (es. IT12345678901 o RSSMRA80A01H501U), senza spazi.
 - confidence = stima 0-1 sulla qualità dell'estrazione.`;
 
 const RESPONSE_SCHEMA = {
@@ -59,6 +62,7 @@ const RESPONSE_SCHEMA = {
     category: { type: "string", nullable: true },
     description: { type: "string", nullable: true },
     documentNumber: { type: "string", nullable: true },
+    taxId: { type: "string", nullable: true },
     confidence: { type: "number", nullable: true },
   },
   required: [
@@ -71,6 +75,7 @@ const RESPONSE_SCHEMA = {
     "category",
     "description",
     "documentNumber",
+    "taxId",
     "confidence",
   ],
 };
