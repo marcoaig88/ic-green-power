@@ -100,13 +100,9 @@ export function UploadExpense() {
 
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-xl space-y-6">
-      <div>
-        <h1 className="brand-title brand-title--ink text-3xl sm:text-4xl">Nuova nota spesa</h1>
-        <p className="brand-subtitle brand-subtitle--ink mt-2 text-base">
-          Puoi caricare più scontrini insieme: Gemini estrae i dati e poi li confermi uno per
-          uno.
-        </p>
-      </div>
+      <p className="text-sm text-muted">
+        Puoi caricare più scontrini insieme: Gemini estrae i dati e poi li confermi uno per uno.
+      </p>
 
       <div
         role="button"

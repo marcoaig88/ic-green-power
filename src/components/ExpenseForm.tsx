@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CATEGORY_LABELS } from "@/lib/format";
+import { CATEGORY_LABELS, formatMoney } from "@/lib/format";
+import {
+  calcMileageAmount,
+  isMileageExpense,
+  mileageMerchant,
+} from "@/lib/mileage";
 import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
 
 export type ExpenseFormValues = {
@@ -17,6 +22,10 @@ export type ExpenseFormValues = {
   description: string | null;
   documentNumber: string | null;
   taxId: string | null;
+  km: number | null;
+  ratePerKm: number | null;
+  routeFrom: string | null;
+  routeTo: string | null;
   status: string;
   fileName: string | null;
   fileMimeType: string | null;
@@ -42,6 +51,7 @@ export function ExpenseForm({
   queue?: { ids: string[]; index: number } | null;
 }) {
   const router = useRouter();
+  const mileage = isMileageExpense(expense);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -51,10 +61,14 @@ export function ExpenseForm({
     expenseDate: toDateInput(expense.expenseDate),
     vatAmount: expense.vatAmount?.toString() || "",
     vatRate: expense.vatRate?.toString() || "",
-    category: expense.category || "altro",
+    category: expense.category || (mileage ? "chilometrico" : "altro"),
     description: expense.description || "",
     documentNumber: expense.documentNumber || "",
     taxId: expense.taxId || "",
+    km: expense.km?.toString() || "",
+    ratePerKm: expense.ratePerKm?.toString() || "",
+    routeFrom: expense.routeFrom || "",
+    routeTo: expense.routeTo || "",
   });
 
   const inQueue = Boolean(queue && queue.ids.length > 0);
@@ -76,11 +90,30 @@ export function ExpenseForm({
       return;
     }
 
-    router.push(`/expenses/review?ids=${remaining.join(",")}&i=${removedId ? queue.index : nextIndex}`);
+    router.push(
+      `/expenses/review?ids=${remaining.join(",")}&i=${removedId ? queue.index : nextIndex}`,
+    );
     router.refresh();
   }
 
+  function updateMileageFields(patch: Partial<typeof form>) {
+    setForm((prev) => {
+      const next = { ...prev, ...patch };
+      const km = Number(next.km);
+      const rate = Number(next.ratePerKm);
+      const amount = calcMileageAmount(km, rate);
+      if (amount != null) next.amount = amount.toFixed(2);
+      next.merchant = mileageMerchant(next.routeFrom, next.routeTo);
+      next.category = "chilometrico";
+      return next;
+    });
+  }
+
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+    if (mileage && (key === "km" || key === "ratePerKm" || key === "routeFrom" || key === "routeTo")) {
+      updateMileageFields({ [key]: value } as Partial<typeof form>);
+      return;
+    }
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -96,12 +129,17 @@ export function ExpenseForm({
           amount: form.amount ? Number(form.amount) : null,
           currency: form.currency || "EUR",
           expenseDate: form.expenseDate || null,
-          vatAmount: form.vatAmount ? Number(form.vatAmount) : null,
-          vatRate: form.vatRate ? Number(form.vatRate) : null,
+          vatAmount: mileage ? null : form.vatAmount ? Number(form.vatAmount) : null,
+          vatRate: mileage ? null : form.vatRate ? Number(form.vatRate) : null,
           category: form.category || null,
           description: form.description || null,
-          documentNumber: form.documentNumber || null,
-          taxId: form.taxId || null,
+          documentNumber: mileage ? null : form.documentNumber || null,
+          taxId: mileage ? null : form.taxId || null,
+          km: mileage && form.km ? Number(form.km) : mileage ? null : undefined,
+          ratePerKm:
+            mileage && form.ratePerKm ? Number(form.ratePerKm) : mileage ? null : undefined,
+          routeFrom: mileage ? form.routeFrom || null : undefined,
+          routeTo: mileage ? form.routeTo || null : undefined,
           status: options?.status,
         }),
       });
@@ -134,7 +172,11 @@ export function ExpenseForm({
       return;
     }
 
-    const ok = window.confirm("Annullare questa spesa? L'allegato verrà eliminato.");
+    const ok = window.confirm(
+      expense.filePath
+        ? "Annullare questa spesa? L'allegato verrà eliminato."
+        : "Annullare questa spesa?",
+    );
     if (!ok) return;
 
     setSaving(true);
@@ -159,122 +201,205 @@ export function ExpenseForm({
     : null;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+    <div className={`grid gap-8 ${mileage ? "" : "lg:grid-cols-[1.1fr_0.9fr]"}`}>
       <section className="space-y-4">
         <div>
-          <h1 className="brand-title brand-title--ink text-3xl sm:text-4xl">Dettaglio spesa</h1>
+          <h1 className="brand-title brand-title--ink text-3xl sm:text-4xl">
+            {mileage ? "Rimborso chilometrico" : "Dettaglio spesa"}
+          </h1>
           <p className="brand-subtitle brand-subtitle--ink mt-1 text-sm">
-            Controlla i campi estratti dall&apos;AI e conferma prima di inviare.
+            {mileage
+              ? "Nessun documento richiesto · importo = km × tariffa"
+              : "Controlla i campi estratti dall'AI e conferma prima di inviare."}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted">Confidenza AI</span>
-          <AiConfidenceBadge value={expense.aiConfidence} />
-        </div>
-
-        {aiError && (
-          <p className="rounded-md border border-warn/40 bg-[#fff8e8] px-3 py-2 text-sm text-warn">
-            Estrazione AI non riuscita: {aiError}. Compila i campi a mano.
-          </p>
+        {!mileage && (
+          <>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted">Confidenza AI</span>
+              <AiConfidenceBadge value={expense.aiConfidence} />
+            </div>
+            {aiError && (
+              <p className="rounded-md border border-warn/40 bg-[#fff8e8] px-3 py-2 text-sm text-warn">
+                Estrazione AI non riuscita: {aiError}. Compila i campi a mano.
+              </p>
+            )}
+          </>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block sm:col-span-2">
-            <span className="mb-1 block text-sm text-muted">Fornitore</span>
-            <input
-              className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
-              value={form.merchant}
-              onChange={(e) => update("merchant", e.target.value)}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm text-muted">Importo</span>
-            <input
-              type="number"
-              step="0.01"
-              className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
-              value={form.amount}
-              onChange={(e) => update("amount", e.target.value)}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm text-muted">Valuta</span>
-            <input
-              className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
-              value={form.currency}
-              onChange={(e) => update("currency", e.target.value)}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm text-muted">Data</span>
-            <input
-              type="date"
-              className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
-              value={form.expenseDate}
-              onChange={(e) => update("expenseDate", e.target.value)}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm text-muted">Categoria</span>
-            <select
-              className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
-              value={form.category}
-              onChange={(e) => update("category", e.target.value)}
-            >
-              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm text-muted">IVA (€)</span>
-            <input
-              type="number"
-              step="0.01"
-              className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
-              value={form.vatAmount}
-              onChange={(e) => update("vatAmount", e.target.value)}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm text-muted">Aliquota IVA %</span>
-            <input
-              type="number"
-              step="0.01"
-              className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
-              value={form.vatRate}
-              onChange={(e) => update("vatRate", e.target.value)}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm text-muted">N. documento</span>
-            <input
-              className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
-              value={form.documentNumber}
-              onChange={(e) => update("documentNumber", e.target.value)}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm text-muted">P.IVA / Codice fiscale</span>
-            <input
-              className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
-              value={form.taxId}
-              onChange={(e) => update("taxId", e.target.value)}
-              placeholder="IT12345678901"
-            />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className="mb-1 block text-sm text-muted">Descrizione</span>
-            <textarea
-              rows={3}
-              className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
-              value={form.description}
-              onChange={(e) => update("description", e.target.value)}
-            />
-          </label>
+          {mileage ? (
+            <>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">Data viaggio</span>
+                <input
+                  type="date"
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.expenseDate}
+                  onChange={(e) => update("expenseDate", e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">Importo</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  readOnly
+                  className="w-full rounded-md border border-line bg-brand-soft/40 px-3 py-2 outline-none"
+                  value={form.amount}
+                />
+                <span className="mt-1 block text-xs text-muted">
+                  Calcolato automaticamente ({formatMoney(Number(form.amount) || 0)})
+                </span>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">Da</span>
+                <input
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.routeFrom}
+                  onChange={(e) => update("routeFrom", e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">A</span>
+                <input
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.routeTo}
+                  onChange={(e) => update("routeTo", e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">Km</span>
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.km}
+                  onChange={(e) => update("km", e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">Tariffa €/km</span>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.ratePerKm}
+                  onChange={(e) => update("ratePerKm", e.target.value)}
+                />
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="mb-1 block text-sm text-muted">Motivo / note</span>
+                <textarea
+                  rows={3}
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.description}
+                  onChange={(e) => update("description", e.target.value)}
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              <label className="block sm:col-span-2">
+                <span className="mb-1 block text-sm text-muted">Fornitore</span>
+                <input
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.merchant}
+                  onChange={(e) => update("merchant", e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">Importo</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.amount}
+                  onChange={(e) => update("amount", e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">Valuta</span>
+                <input
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.currency}
+                  onChange={(e) => update("currency", e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">Data</span>
+                <input
+                  type="date"
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.expenseDate}
+                  onChange={(e) => update("expenseDate", e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">Categoria</span>
+                <select
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.category}
+                  onChange={(e) => update("category", e.target.value)}
+                >
+                  {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">IVA (€)</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.vatAmount}
+                  onChange={(e) => update("vatAmount", e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">Aliquota IVA %</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.vatRate}
+                  onChange={(e) => update("vatRate", e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">N. documento</span>
+                <input
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.documentNumber}
+                  onChange={(e) => update("documentNumber", e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm text-muted">P.IVA / Codice fiscale</span>
+                <input
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.taxId}
+                  onChange={(e) => update("taxId", e.target.value)}
+                  placeholder="IT12345678901"
+                />
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="mb-1 block text-sm text-muted">Descrizione</span>
+                <textarea
+                  rows={3}
+                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  value={form.description}
+                  onChange={(e) => update("description", e.target.value)}
+                />
+              </label>
+            </>
+          )}
         </div>
 
         {error && <p className="text-sm text-danger">{error}</p>}
@@ -345,22 +470,24 @@ export function ExpenseForm({
         </div>
       </section>
 
-      <aside className="space-y-3">
-        <h2 className="text-sm font-medium text-muted">Allegato</h2>
-        <div className="overflow-hidden rounded-lg border border-line bg-white/70">
-          {fileUrl && expense.fileMimeType?.startsWith("image/") ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={fileUrl} alt="Scontrino" className="max-h-[70vh] w-full object-contain" />
-          ) : fileUrl ? (
-            <iframe title="PDF" src={fileUrl} className="h-[70vh] w-full" />
-          ) : (
-            <p className="p-6 text-sm text-muted">Nessun file</p>
+      {!mileage && (
+        <aside className="space-y-3">
+          <h2 className="text-sm font-medium text-muted">Allegato</h2>
+          <div className="overflow-hidden rounded-lg border border-line bg-white/70">
+            {fileUrl && expense.fileMimeType?.startsWith("image/") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={fileUrl} alt="Scontrino" className="max-h-[70vh] w-full object-contain" />
+            ) : fileUrl ? (
+              <iframe title="PDF" src={fileUrl} className="h-[70vh] w-full" />
+            ) : (
+              <p className="p-6 text-sm text-muted">Nessun file</p>
+            )}
+          </div>
+          {expense.fileName && (
+            <p className="truncate text-xs text-muted">{expense.fileName}</p>
           )}
-        </div>
-        {expense.fileName && (
-          <p className="truncate text-xs text-muted">{expense.fileName}</p>
-        )}
-      </aside>
+        </aside>
+      )}
     </div>
   );
 }

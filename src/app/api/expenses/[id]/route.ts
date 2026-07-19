@@ -15,6 +15,10 @@ const updateSchema = z.object({
   description: z.string().nullable().optional(),
   documentNumber: z.string().nullable().optional(),
   taxId: z.string().nullable().optional(),
+  km: z.number().nullable().optional(),
+  ratePerKm: z.number().nullable().optional(),
+  routeFrom: z.string().nullable().optional(),
+  routeTo: z.string().nullable().optional(),
   status: z.enum(["draft", "submitted", "approved", "rejected"]).optional(),
 });
 
@@ -86,6 +90,10 @@ export async function PATCH(request: Request, { params }: Params) {
         description: body.description,
         documentNumber: body.documentNumber,
         taxId: body.taxId,
+        km: body.km,
+        ratePerKm: body.ratePerKm,
+        routeFrom: body.routeFrom,
+        routeTo: body.routeTo,
         status: body.status,
       },
       include: { user: { select: { id: true, name: true, email: true } } },

@@ -7,6 +7,10 @@ type CsvExpense = {
   description: string | null;
   documentNumber: string | null;
   taxId: string | null;
+  km: number | null;
+  ratePerKm: number | null;
+  routeFrom: string | null;
+  routeTo: string | null;
   category: string | null;
   amount: number | null;
   currency: string;
@@ -43,6 +47,10 @@ export function expensesToCsv(expenses: CsvExpense[]) {
     "Stato",
     "N. documento",
     "P.IVA / CF",
+    "Km",
+    "Tariffa €/km",
+    "Da",
+    "A",
     "Descrizione",
   ];
 
@@ -63,6 +71,10 @@ export function expensesToCsv(expenses: CsvExpense[]) {
     cell(STATUS_LABELS[expense.status] || expense.status),
     cell(expense.documentNumber || ""),
     cell(expense.taxId || ""),
+    cell(expense.km != null ? String(expense.km).replace(".", ",") : ""),
+    cell(expense.ratePerKm != null ? String(expense.ratePerKm).replace(".", ",") : ""),
+    cell(expense.routeFrom || ""),
+    cell(expense.routeTo || ""),
     cell(expense.description || ""),
   ]);
 

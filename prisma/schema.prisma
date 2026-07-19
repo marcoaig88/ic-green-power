@@ -31,6 +31,11 @@ model Expense {
   description    String?
   documentNumber String?
   taxId          String? // Partita IVA o Codice Fiscale del fornitore
+  // Rimborso chilometrico (senza documento)
+  km             Float?
+  ratePerKm      Float?
+  routeFrom      String?
+  routeTo        String?
   status         String    @default("draft") // draft | submitted | approved | rejected
   aiRawJson      String?
   aiConfidence   Float?

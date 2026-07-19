@@ -29,6 +29,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   viaggio: "Viaggio",
   alloggio: "Alloggio",
   trasporto: "Trasporto",
+  chilometrico: "Rimborso chilometrico",
   materiale: "Materiale",
   software: "Software",
   altro: "Altro",
