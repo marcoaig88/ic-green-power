@@ -31,9 +31,10 @@ Compila in `.env`:
 
 | Variabile | Dove trovarla |
 |-----------|----------------|
-| `DATABASE_URL` | Supabase → Settings → Database → URI (direct, porta 5432) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Settings → API → Project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Settings → API → `service_role` |
+| `DATABASE_URL` | Supabase → Connect → **Transaction pooler** (porta **6543**) |
+| `DIRECT_URL` | Supabase → Connect → **Direct** (porta **5432**) |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://[PROJECT-REF].supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Settings → API Keys → `service_role` / secret |
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) |
 | `SESSION_SECRET` | Stringa lunga casuale |
 

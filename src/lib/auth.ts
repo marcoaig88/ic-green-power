@@ -75,15 +75,20 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const session = verifySessionToken(token);
   if (!session) return null;
 
-  const user = await prisma.user.findUnique({ where: { id: session.id } });
-  if (!user) return null;
+  try {
+    const user = await prisma.user.findUnique({ where: { id: session.id } });
+    if (!user) return null;
 
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  };
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+  } catch (error) {
+    console.error("getSessionUser DB error:", error);
+    return null;
+  }
 }
 
 export async function requireUser() {
