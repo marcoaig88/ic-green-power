@@ -7,6 +7,7 @@ import { fullName } from "@/lib/user";
 import {
   ASSIGNABLE_ROLE_OPTIONS,
   ROLES,
+  compareTeamUsers,
   roleLabel,
   type AssignableRole,
   isAssignableRole,
@@ -63,11 +64,7 @@ export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
   }, [vehicle]);
 
   function sortUsers(list: TeamMember[]) {
-    return [...list].sort((a, b) => {
-      const bySurname = a.surname.localeCompare(b.surname, "it");
-      if (bySurname !== 0) return bySurname;
-      return a.name.localeCompare(b.name, "it");
-    });
+    return [...list].sort(compareTeamUsers);
   }
 
   async function createEmployee(e: React.FormEvent) {

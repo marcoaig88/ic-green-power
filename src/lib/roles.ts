@@ -76,10 +76,28 @@ export function roleLabel(role: string) {
 }
 
 export const ASSIGNABLE_ROLE_OPTIONS: { value: AssignableRole; label: string }[] = [
-  { value: ROLES.coo, label: "COO" },
   { value: ROLES.cfo, label: "CFO" },
+  { value: ROLES.coo, label: "COO" },
   { value: ROLES.employee, label: "Dipendente" },
 ];
+
+/** Ordine elenco utenti: CFO → COO → Dipendente. */
+export function teamRoleRank(role: string) {
+  if (isCfo(role)) return 0;
+  if (isCoo(role)) return 1;
+  return 2;
+}
+
+export function compareTeamUsers(
+  a: { role: string; surname: string; name: string },
+  b: { role: string; surname: string; name: string },
+) {
+  const byRole = teamRoleRank(a.role) - teamRoleRank(b.role);
+  if (byRole !== 0) return byRole;
+  const bySurname = a.surname.localeCompare(b.surname, "it");
+  if (bySurname !== 0) return bySurname;
+  return a.name.localeCompare(b.name, "it");
+}
 
 /** Filtro Prisma: utenti del team (non Admin IT). */
 export const teamUsersWhere = {

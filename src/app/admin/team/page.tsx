@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TeamAdmin } from "@/components/TeamAdmin";
-import { canManageUsers, teamUsersWhere } from "@/lib/roles";
+import { canManageUsers, compareTeamUsers, teamUsersWhere } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,6 @@ export default async function AdminTeamPage() {
 
   const users = await prisma.user.findMany({
     where: teamUsersWhere,
-    orderBy: [{ surname: "asc" }, { name: "asc" }],
     select: {
       id: true,
       name: true,
@@ -33,6 +32,8 @@ export default async function AdminTeamPage() {
       },
     },
   });
+
+  users.sort(compareTeamUsers);
 
   return (
     <div className="space-y-6">

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import {
   ASSIGNABLE_ROLES,
   canManageUsers,
+  compareTeamUsers,
   isAssignableRole,
   teamUsersWhere,
 } from "@/lib/roles";
@@ -61,9 +62,9 @@ export async function GET() {
 
   const users = await prisma.user.findMany({
     where: teamUsersWhere,
-    orderBy: [{ surname: "asc" }, { name: "asc" }],
     select: userSelect,
   });
+  users.sort(compareTeamUsers);
 
   return NextResponse.json({ users });
 }
