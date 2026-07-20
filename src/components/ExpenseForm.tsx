@@ -607,7 +607,7 @@ export function ExpenseForm({
               onClick={cancel}
               className="rounded-md border border-danger/40 px-4 py-2 text-sm font-medium text-danger transition hover:border-danger hover:bg-[#fde8e8] disabled:opacity-60"
             >
-              {inQueue && isDraft ? "Annulla questo" : "Annulla nota spese"}
+              {inQueue && isDraft ? "Annulla" : "Annulla nota spese"}
             </button>
           )}
           {showApprovalActions && (
