@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type Props = {
+type DistanceProps = {
   from: string;
   to: string;
   roundTrip: boolean;
@@ -16,38 +16,31 @@ type Props = {
   onError: (message: string) => void;
 };
 
-export function CalculateDistanceButton({
-  from,
-  to,
-  roundTrip,
-  onRoundTripChange,
-  onResult,
-  onError,
-}: Props) {
+export function CalculateDistanceButton(props: DistanceProps) {
   const [loading, setLoading] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
 
   async function calculate() {
     setLoading(true);
     setHint(null);
-    onError("");
+    props.onError("");
     try {
-      if (!from.trim() || !to.trim()) {
+      if (!props.from.trim() || !props.to.trim()) {
         throw new Error("Indica partenza e destinazione");
       }
       const res = await fetch("/api/mileage/distance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: from.trim(),
-          to: to.trim(),
-          roundTrip,
+          from: props.from.trim(),
+          to: props.to.trim(),
+          roundTrip: props.roundTrip,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Calcolo non riuscito");
 
-      onResult({
+      props.onResult({
         km: data.km,
         durationText: data.durationText,
         origin: data.origin,
@@ -55,14 +48,14 @@ export function CalculateDistanceButton({
       });
       setHint(
         [
-          `${data.km} km${roundTrip ? " (andata e ritorno)" : ""}`,
+          `${data.km} km${props.roundTrip ? " (andata e ritorno)" : ""}`,
           data.durationText ? `· ${data.durationText} di guida` : null,
         ]
           .filter(Boolean)
           .join(" "),
       );
     } catch (e) {
-      onError(e instanceof Error ? e.message : "Errore calcolo km");
+      props.onError(e instanceof Error ? e.message : "Errore calcolo km");
       setHint(null);
     } finally {
       setLoading(false);
@@ -70,30 +63,34 @@ export function CalculateDistanceButton({
   }
 
   return (
-    <div className="sm:col-span-2 space-y-2 rounded-lg border border-line bg-white/60 px-3 py-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <label className="flex items-center gap-2 text-sm text-ink">
+    <>
+      <div className="col-span-full space-y-1.5">
+        <label className="inline-flex items-center gap-2 text-sm font-medium text-ink">
           <input
             type="checkbox"
-            checked={roundTrip}
+            checked={props.roundTrip}
             onChange={(e) => {
               setHint(null);
-              onRoundTripChange(e.target.checked);
+              props.onRoundTripChange(e.target.checked);
             }}
             className="rounded border-line"
           />
           Andata e ritorno
         </label>
+        {hint && <p className="text-xs text-muted">{hint}</p>}
+      </div>
+
+      <div className="flex flex-col justify-end">
+        <span className="mb-1 block text-xs font-semibold text-muted">&nbsp;</span>
         <button
           type="button"
           disabled={loading}
           onClick={calculate}
-          className="rounded-md border border-brand/40 bg-brand-soft/70 px-3 py-1.5 text-sm font-semibold text-brand-deep hover:border-brand disabled:opacity-60"
+          className="w-full rounded-md border border-brand/40 bg-brand-soft/70 px-3 py-2 text-sm font-semibold text-brand-deep hover:border-brand disabled:opacity-60"
         >
           {loading ? "Calcolo…" : "Calcola km con Google Maps"}
         </button>
       </div>
-      {hint && <p className="text-xs text-muted">{hint}</p>}
-    </div>
+    </>
   );
 }

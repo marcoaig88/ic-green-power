@@ -417,47 +417,71 @@ export function ExpenseForm({
                   onChange={(e) => update("routeTo", e.target.value)}
                 />
               </label>
-              {canEdit && (
-                <CalculateDistanceButton
-                  from={form.routeFrom}
-                  to={form.routeTo}
-                  roundTrip={roundTrip}
-                  onRoundTripChange={(value) => {
-                    setRoundTrip(value);
-                    updateMileageFields({ km: "" });
-                    setError(null);
-                  }}
-                  onError={(message) => setError(message || null)}
-                  onResult={(result) => {
-                    updateMileageFields({
-                      km: String(result.km),
-                      routeFrom: result.origin || form.routeFrom,
-                      routeTo: result.destination || form.routeTo,
-                    });
-                    setError(null);
-                  }}
-                />
+              {canEdit ? (
+                <div className="col-span-full sm:col-span-2 grid gap-4 sm:grid-cols-3">
+                  <CalculateDistanceButton
+                    from={form.routeFrom}
+                    to={form.routeTo}
+                    roundTrip={roundTrip}
+                    onRoundTripChange={(value) => {
+                      setRoundTrip(value);
+                      updateMileageFields({ km: "" });
+                      setError(null);
+                    }}
+                    onError={(message) => setError(message || null)}
+                    onResult={(result) => {
+                      updateMileageFields({
+                        km: String(result.km),
+                        routeFrom: result.origin || form.routeFrom,
+                        routeTo: result.destination || form.routeTo,
+                      });
+                      setError(null);
+                    }}
+                  />
+                  <label className="block">
+                    <span className="mb-1 block text-sm text-muted">Km (Google Maps)</span>
+                    <input
+                      type="text"
+                      readOnly
+                      value={form.km ? form.km.replace(".", ",") : ""}
+                      placeholder="Usa «Calcola km con Google Maps»"
+                      className="w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm text-muted">Tariffa €/km</span>
+                    <input
+                      type="text"
+                      readOnly
+                      value={lockedRate.toFixed(4).replace(".", ",")}
+                      className="w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink"
+                      aria-label="Tariffa chilometrica"
+                    />
+                  </label>
+                </div>
+              ) : (
+                <>
+                  <label className="block">
+                    <span className="mb-1 block text-sm text-muted">Km (Google Maps)</span>
+                    <input
+                      type="text"
+                      readOnly
+                      value={form.km ? form.km.replace(".", ",") : ""}
+                      className="w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm text-muted">Tariffa €/km</span>
+                    <input
+                      type="text"
+                      readOnly
+                      value={lockedRate.toFixed(4).replace(".", ",")}
+                      className="w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink"
+                      aria-label="Tariffa chilometrica"
+                    />
+                  </label>
+                </>
               )}
-              <label className="block">
-                <span className="mb-1 block text-sm text-muted">Km (Google Maps)</span>
-                <input
-                  type="text"
-                  readOnly
-                  value={form.km ? form.km.replace(".", ",") : ""}
-                  placeholder="Usa «Calcola km con Google Maps»"
-                  className="w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-sm text-muted">Tariffa €/km</span>
-                <input
-                  type="text"
-                  readOnly
-                  value={lockedRate.toFixed(4).replace(".", ",")}
-                  className="w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink"
-                  aria-label="Tariffa chilometrica"
-                />
-              </label>
               <label className="block sm:col-span-2">
                 <span className="mb-1 block text-sm text-muted">Motivo / note</span>
                 <textarea

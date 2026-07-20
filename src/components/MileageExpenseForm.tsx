@@ -187,8 +187,8 @@ export function MileageExpenseForm({
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block sm:col-span-2">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="block col-span-full">
           <span className="mb-1 block text-xs font-semibold text-muted">Data viaggio</span>
           <input
             type="date"
@@ -198,7 +198,7 @@ export function MileageExpenseForm({
             className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none ring-brand focus:ring-2"
           />
         </label>
-        <label className="block">
+        <label className="block sm:col-span-1">
           <span className="mb-1 block text-xs font-semibold text-muted">Da</span>
           <input
             required
@@ -208,7 +208,7 @@ export function MileageExpenseForm({
             className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none ring-brand focus:ring-2"
           />
         </label>
-        <label className="block">
+        <label className="block sm:col-span-2">
           <span className="mb-1 block text-xs font-semibold text-muted">A</span>
           <input
             required
@@ -261,7 +261,7 @@ export function MileageExpenseForm({
             aria-label="Tariffa chilometrica"
           />
         </label>
-        <label className="block sm:col-span-2">
+        <label className="block col-span-full">
           <span className="mb-1 block text-xs font-semibold text-muted">
             Motivo / note (opzionale)
           </span>
