@@ -32,7 +32,30 @@ export async function GET(request: NextRequest) {
 
   const expenses = await prisma.expense.findMany({
     where,
-    include: { user: { select: { name: true, surname: true, email: true } } },
+    select: {
+      id: true,
+      expenseDate: true,
+      createdAt: true,
+      merchant: true,
+      description: true,
+      documentNumber: true,
+      taxId: true,
+      km: true,
+      ratePerKm: true,
+      routeFrom: true,
+      routeTo: true,
+      category: true,
+      amount: true,
+      currency: true,
+      vatAmount: true,
+      vatRate: true,
+      status: true,
+      rejectionReason: true,
+      vehicleBrand: true,
+      vehicleModel: true,
+      aciVehicleRateId: true,
+      user: { select: { name: true, surname: true, email: true } },
+    },
     orderBy: [{ expenseDate: "desc" }, { createdAt: "desc" }],
   });
 

@@ -54,9 +54,22 @@ export function splitPendingForActor(
   return { approvable, ownCfo };
 }
 
-/** Conteggio badge nav: solo note su cui l'utente può agire. */
+/**
+ * KPI / badge «Da approvare»:
+ * - CFO → note altrui da approvare + proprie in attesa del COO
+ * - COO → solo note del CFO da approvare
+ */
+export function pendingForDaApprovareKpi(
+  actor: SessionActor,
+  pending: Awaited<ReturnType<typeof loadPendingExpenses>>,
+) {
+  const { approvable, ownCfo } = splitPendingForActor(actor, pending);
+  return isCfo(actor.role) ? [...approvable, ...ownCfo] : approvable;
+}
+
+/** Conteggio badge nav Attività. */
 export async function countApprovablePending(actor: SessionActor) {
   if (!canApproveExpenses(actor.role)) return 0;
   const pending = await loadPendingExpenses(actor);
-  return splitPendingForActor(actor, pending).approvable.length;
+  return pendingForDaApprovareKpi(actor, pending).length;
 }

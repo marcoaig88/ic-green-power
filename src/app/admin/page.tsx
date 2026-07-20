@@ -6,11 +6,12 @@ import { DashboardCharts } from "@/components/DashboardCharts";
 import {
   canApproveExpenses,
   expenseDashboardWhere,
+  isCfo,
   isCoo,
 } from "@/lib/roles";
 import {
   loadPendingExpenses,
-  splitPendingForActor,
+  pendingForDaApprovareKpi,
 } from "@/lib/pending-approvals";
 
 export const dynamic = "force-dynamic";
@@ -110,12 +111,12 @@ export default async function AdminDashboardPage() {
   );
   const monthAll = sumAmounts(monthSubmittedOrApproved);
 
-  const { approvable } = splitPendingForActor(actor, pending);
   const showAttivita = canApproveExpenses(user.role);
-  const pendingCount = showAttivita ? approvable.length : pending.length;
-  const pendingTotal = showAttivita
-    ? sumAmounts(approvable)
-    : sumAmounts(pending);
+  const daApprovare = showAttivita
+    ? pendingForDaApprovareKpi(actor, pending)
+    : pending;
+  const pendingCount = daApprovare.length;
+  const pendingTotal = sumAmounts(daApprovare);
 
   const monthLabel = new Intl.DateTimeFormat("it-IT", {
     month: "long",
@@ -158,7 +159,9 @@ export default async function AdminDashboardPage() {
               hint={
                 pendingCount === 0
                   ? "Nessuna nota · vai ad Attività"
-                  : `${pendingCount} ${pendingCount === 1 ? "nota" : "note"} · vai ad Attività`
+                  : isCfo(user.role)
+                    ? `${pendingCount} ${pendingCount === 1 ? "nota" : "note"} (incl. tue) · Attività`
+                    : `${pendingCount} ${pendingCount === 1 ? "nota" : "note"} · vai ad Attività`
               }
               accent
             />
