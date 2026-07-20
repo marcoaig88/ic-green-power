@@ -126,13 +126,7 @@ export function AppShell({ user, pendingApprovalsCount = 0, children }: Props) {
                 >
                   {item.label}
                   {badge != null && (
-                    <span
-                      className={`inline-flex min-w-[1.25rem] items-center justify-center rounded-md px-1.5 py-0.5 text-[11px] font-extrabold leading-none ${
-                        active
-                          ? "bg-white/25 text-white"
-                          : "bg-brand text-white"
-                      }`}
-                    >
+                    <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-md bg-[#c62828] px-1.5 py-0.5 text-[11px] font-extrabold leading-none text-white">
                       {badge > 99 ? "99+" : badge}
                     </span>
                   )}
