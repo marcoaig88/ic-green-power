@@ -158,20 +158,20 @@ export function LoginPicker({ users }: { users: LoginUser[] }) {
             </p>
           </div>
 
-          {coos.length > 0 && (
+          {cfos.length > 0 && (
             <RoleSection
-              title="COO"
-              users={coos}
+              title="CFO"
+              users={cfos}
               loadingId={loadingId}
               disabled={busy}
               onSelect={selectUser}
             />
           )}
 
-          {cfos.length > 0 && (
+          {coos.length > 0 && (
             <RoleSection
-              title="CFO"
-              users={cfos}
+              title="COO"
+              users={coos}
               loadingId={loadingId}
               disabled={busy}
               onSelect={selectUser}
