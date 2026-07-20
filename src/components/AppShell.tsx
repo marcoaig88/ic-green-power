@@ -107,9 +107,10 @@ export function AppShell({ user, children }: Props) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={active ? "page" : undefined}
                   className={`rounded-xl px-3.5 py-2 text-sm font-bold transition ${
                     active
-                      ? "bg-brand text-white shadow-sm"
+                      ? "border border-brand bg-brand !text-white shadow-sm hover:!text-white"
                       : "border border-line bg-white text-ink hover:border-brand hover:bg-brand-soft/60 hover:text-brand-deep"
                   }`}
                 >
