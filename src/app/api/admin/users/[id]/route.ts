@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canManageUsers } from "@/lib/roles";
+import { hasNameSurnameClash } from "@/lib/user";
 
 const patchSchema = z.object({
   name: z.string().trim().min(1).optional(),
@@ -42,6 +43,18 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       if (clash) {
         return NextResponse.json({ error: "Email già in uso" }, { status: 409 });
       }
+    }
+
+    const nextName = body.name ?? existing.name;
+    const nextSurname = body.surname ?? existing.surname;
+    if (
+      (body.name !== undefined || body.surname !== undefined) &&
+      (await hasNameSurnameClash(nextName, nextSurname, id))
+    ) {
+      return NextResponse.json(
+        { error: "Esiste già un utente con lo stesso nome e cognome" },
+        { status: 409 },
+      );
     }
 
     if (body.aciVehicleRateId) {

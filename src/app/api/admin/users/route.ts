@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canManageUsers } from "@/lib/roles";
+import { hasNameSurnameClash } from "@/lib/user";
 
 const createSchema = z.object({
   name: z.string().trim().min(1),
@@ -72,6 +73,13 @@ export async function POST(request: NextRequest) {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return NextResponse.json({ error: "Email già registrata" }, { status: 409 });
+    }
+
+    if (await hasNameSurnameClash(body.name, body.surname)) {
+      return NextResponse.json(
+        { error: "Esiste già un utente con lo stesso nome e cognome" },
+        { status: 409 },
+      );
     }
 
     if (body.aciVehicleRateId) {
