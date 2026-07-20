@@ -91,11 +91,3 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     return null;
   }
 }
-
-export async function requireUser() {
-  const user = await getSessionUser();
-  if (!user) {
-    throw new Error("UNAUTHORIZED");
-  }
-  return user;
-}
