@@ -1,6 +1,7 @@
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_MILEAGE_RATE } from "@/lib/mileage";
+import { homePathForRole } from "@/lib/roles";
 import { NewExpenseClient } from "@/components/NewExpenseClient";
 
 export default async function NewExpensePage() {
@@ -27,6 +28,7 @@ export default async function NewExpensePage() {
       mileageRatePerKm={ratePerKm}
       vehicleLabel={vehicleLabel}
       aciVehicleRateId={user?.aciVehicleRateId || null}
+      homeHref={homePathForRole(session.role)}
     />
   );
 }

@@ -2,7 +2,11 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ExpenseForm } from "@/components/ExpenseForm";
-import { canAccessExpense, canApproveExpense } from "@/lib/roles";
+import {
+  canAccessExpense,
+  canApproveExpense,
+  homePathForRole,
+} from "@/lib/roles";
 
 type Props = {
   searchParams: Promise<{ ids?: string; i?: string }>;
@@ -47,7 +51,7 @@ export default async function ExpenseReviewPage({ searchParams }: Props) {
           Conferma scontrini · {index + 1} di {ids.length}
         </p>
         <p className="mt-1 text-muted">
-          Controlla e conferma ogni spesa. Alla fine tornerai all&apos;elenco.
+          Controlla e conferma ogni spesa. Alla fine tornerai alla dashboard.
         </p>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-bg-accent">
           <div
@@ -59,6 +63,7 @@ export default async function ExpenseReviewPage({ searchParams }: Props) {
 
       <ExpenseForm
         key={expense.id}
+        homeHref={homePathForRole(user.role)}
         isAdmin={canApproveExpense(user, {
           userId: expense.userId,
           user: expense.user,

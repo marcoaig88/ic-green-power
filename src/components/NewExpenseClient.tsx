@@ -10,12 +10,14 @@ type Props = {
   mileageRatePerKm: number;
   vehicleLabel: string | null;
   aciVehicleRateId: string | null;
+  homeHref?: string;
 };
 
 export function NewExpenseClient({
   mileageRatePerKm,
   vehicleLabel,
   aciVehicleRateId,
+  homeHref = "/expenses",
 }: Props) {
   const [mode, setMode] = useState<Mode>("receipt");
 
@@ -60,6 +62,7 @@ export function NewExpenseClient({
           ratePerKm={mileageRatePerKm}
           vehicleLabel={vehicleLabel}
           aciVehicleRateId={aciVehicleRateId}
+          homeHref={homeHref}
         />
       )}
     </div>

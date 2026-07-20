@@ -17,10 +17,12 @@ function formatRate(rate: number) {
 export function MileageExpenseForm({
   ratePerKm,
   vehicleLabel,
+  homeHref = "/expenses",
 }: {
   ratePerKm: number;
   vehicleLabel: string | null;
   aciVehicleRateId?: string | null;
+  homeHref?: string;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -76,7 +78,7 @@ export function MileageExpenseForm({
       if (!res.ok) throw new Error(data.error || "Salvataggio non riuscito");
 
       if (asSubmitted) {
-        router.push("/expenses");
+        router.push(homeHref);
       } else {
         router.push(`/expenses/${data.expense.id}`);
       }

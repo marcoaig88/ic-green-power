@@ -59,11 +59,14 @@ export function ExpenseForm({
   isAdmin,
   aiError,
   queue,
+  homeHref = "/expenses",
 }: {
   expense: ExpenseFormValues;
   isAdmin: boolean;
   aiError?: string | null;
   queue?: { ids: string[]; index: number } | null;
+  /** Destinazione dopo conferma/approvazione (dashboard o elenco). */
+  homeHref?: string;
 }) {
   const router = useRouter();
   const mileage = isMileageExpense(expense);
@@ -93,7 +96,7 @@ export function ExpenseForm({
   const isLastInQueue = inQueue && queue!.index >= queue!.ids.length - 1;
 
   function goHome() {
-    router.push("/");
+    router.push(homeHref);
     router.refresh();
   }
 

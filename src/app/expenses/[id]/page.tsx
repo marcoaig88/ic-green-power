@@ -2,7 +2,11 @@ import { notFound, redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ExpenseForm } from "@/components/ExpenseForm";
-import { canAccessExpense, canApproveExpense } from "@/lib/roles";
+import {
+  canAccessExpense,
+  canApproveExpense,
+  homePathForRole,
+} from "@/lib/roles";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -27,6 +31,7 @@ export default async function ExpenseDetailPage({ params, searchParams }: Props)
 
   return (
     <ExpenseForm
+      homeHref={homePathForRole(user.role)}
       isAdmin={canApproveExpense(user, {
         userId: expense.userId,
         user: expense.user,
