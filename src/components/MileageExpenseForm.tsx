@@ -108,7 +108,7 @@ export function MileageExpenseForm({
           </p>
         ) : (
           <p className="mt-2 rounded-md border border-warn/30 bg-[#fff8e8] px-3 py-2 text-sm text-warn">
-            Nessun veicolo ACI assegnato: viene usata la tariffa aziendale. Chiedi
+            Nessun veicolo assegnato: viene usata la tariffa aziendale. Chiedi
             all&apos;admin di associarti un&apos;auto.
           </p>
         )}

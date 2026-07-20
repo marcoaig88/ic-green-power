@@ -257,7 +257,7 @@ export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
                     <p className="mt-1 text-sm text-muted">
                       {member.aciVehicleRate
                         ? `${member.aciVehicleRate.brand} ${member.aciVehicleRate.model} · ${formatMoney(member.aciVehicleRate.ratePerKm)}/km`
-                        : "Nessun veicolo ACI assegnato"}
+                        : "Nessun veicolo assegnato"}
                     </p>
                   </div>
                   <button
