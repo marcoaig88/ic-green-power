@@ -90,6 +90,10 @@ export default async function AdminDashboardPage() {
     return date >= monthStart;
   });
 
+  const monthSubmittedOrApproved = monthExpenses.filter(
+    (e) => e.status === "submitted" || e.status === "approved",
+  );
+
   const byStatus = Object.keys(STATUS_LABELS).map((status) => {
     const rows = allExpenses.filter((e) => e.status === status);
     return {
@@ -104,7 +108,7 @@ export default async function AdminDashboardPage() {
   const monthApproved = sumAmounts(
     monthExpenses.filter((e) => e.status === "approved"),
   );
-  const monthAll = sumAmounts(monthExpenses);
+  const monthAll = sumAmounts(monthSubmittedOrApproved);
 
   const { approvable } = splitPendingForActor(actor, pending);
   const showAttivita = canApproveExpenses(user.role);
@@ -146,18 +150,6 @@ export default async function AdminDashboardPage() {
       </div>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Kpi
-          label="Totale mese"
-          value={formatMoney(monthAll)}
-          hint={
-            isCoo(user.role) ? "Spese del CFO nel mese" : "Tutte le spese del mese"
-          }
-        />
-        <Kpi
-          label="Approvato nel mese"
-          value={formatMoney(monthApproved)}
-          hint="Solo spese approvate"
-        />
         {showAttivita ? (
           <Link href="/admin/attivita" className="block transition hover:opacity-90">
             <Kpi
@@ -183,6 +175,20 @@ export default async function AdminDashboardPage() {
             accent
           />
         )}
+        <Kpi
+          label="Approvato nel mese"
+          value={formatMoney(monthApproved)}
+          hint="Solo spese approvate"
+        />
+        <Kpi
+          label="Totale mese"
+          value={formatMoney(monthAll)}
+          hint={
+            isCoo(user.role)
+              ? "CFO · (escluse bozze e rifiutate)"
+              : "(escluse bozze e rifiutate)"
+          }
+        />
       </section>
 
       {!isCoo(user.role) && (
