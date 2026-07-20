@@ -6,11 +6,33 @@ import { prisma } from "@/lib/prisma";
 import { canManageUsers } from "@/lib/roles";
 
 const createSchema = z.object({
-  name: z.string().trim().min(2),
+  name: z.string().trim().min(1),
+  surname: z.string().trim().min(1),
   email: z.string().trim().email(),
   password: z.string().min(6).optional(),
   aciVehicleRateId: z.string().min(1).nullable().optional(),
 });
+
+const userSelect = {
+  id: true,
+  name: true,
+  surname: true,
+  email: true,
+  role: true,
+  createdAt: true,
+  aciVehicleRateId: true,
+  aciVehicleRate: {
+    select: {
+      id: true,
+      year: true,
+      brand: true,
+      model: true,
+      fuelType: true,
+      ratePerKm: true,
+      production: true,
+    },
+  },
+} as const;
 
 async function requireUserManager() {
   const user = await getSessionUser();
@@ -32,26 +54,8 @@ export async function GET() {
 
   const users = await prisma.user.findMany({
     where: { role: "employee" },
-    orderBy: { name: "asc" },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      createdAt: true,
-      aciVehicleRateId: true,
-      aciVehicleRate: {
-        select: {
-          id: true,
-          year: true,
-          brand: true,
-          model: true,
-          fuelType: true,
-          ratePerKm: true,
-          production: true,
-        },
-      },
-    },
+    orderBy: [{ surname: "asc" }, { name: "asc" }],
+    select: userSelect,
   });
 
   return NextResponse.json({ users });
@@ -83,28 +87,13 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.create({
       data: {
         name: body.name,
+        surname: body.surname,
         email,
         passwordHash,
         role: "employee",
         aciVehicleRateId: body.aciVehicleRateId || null,
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        aciVehicleRateId: true,
-        aciVehicleRate: {
-          select: {
-            id: true,
-            year: true,
-            brand: true,
-            model: true,
-            fuelType: true,
-            ratePerKm: true,
-          },
-        },
-      },
+      select: userSelect,
     });
 
     return NextResponse.json({ user }, { status: 201 });

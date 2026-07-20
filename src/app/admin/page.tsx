@@ -12,6 +12,7 @@ import {
 import { ExpenseFilters } from "@/components/ExpenseFilters";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { PendingApprovals } from "@/components/PendingApprovals";
+import { fullName } from "@/lib/user";
 
 export const dynamic = "force-dynamic";
 
@@ -86,7 +87,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         expenseDate: true,
         createdAt: true,
         userId: true,
-        user: { select: { id: true, name: true } },
+        user: { select: { id: true, name: true, surname: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -103,14 +104,14 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         createdAt: true,
         aiConfidence: true,
         status: true,
-        user: { select: { name: true } },
+        user: { select: { name: true, surname: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
     prisma.user.findMany({
       where: { role: "employee" },
-      select: { id: true, name: true, email: true },
-      orderBy: { name: "asc" },
+      select: { id: true, name: true, surname: true, email: true },
+      orderBy: [{ surname: "asc" }, { name: "asc" }],
     }),
   ]);
 
@@ -189,7 +190,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
 
       <ExpenseFilters
         isAdmin
-        users={team.map((member) => ({ id: member.id, name: member.name }))}
+        users={team.map((member) => ({ id: member.id, name: fullName(member) }))}
         resultCount={allExpenses.length}
         values={filters}
         basePath="/admin"
@@ -237,7 +238,12 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
             Vedi in lista →
           </Link>
         </div>
-        <PendingApprovals expenses={pending} />
+        <PendingApprovals
+          expenses={pending.map((expense) => ({
+            ...expense,
+            user: { name: fullName(expense.user) },
+          }))}
+        />
       </section>
 
       <DashboardCharts byStatus={byStatus} byMonth={byMonth} />

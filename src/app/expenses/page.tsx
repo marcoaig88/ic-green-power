@@ -12,6 +12,7 @@ import { ExpenseFilters } from "@/components/ExpenseFilters";
 import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
 import { QuickApproveButton } from "@/components/QuickApproveButton";
 import { canApproveExpenses, canViewAllExpenses } from "@/lib/roles";
+import { fullName } from "@/lib/user";
 
 type Props = {
   searchParams: Promise<ExpenseFilterParams>;
@@ -30,20 +31,22 @@ export default async function ExpensesPage({ searchParams }: Props) {
   const manager = canViewAllExpenses(user.role);
   const canApprove = canApproveExpenses(user.role);
 
-  const [expenses, teamUsers] = await Promise.all([
+  const [expenses, teamRows] = await Promise.all([
     prisma.expense.findMany({
       where: finalWhere,
-      include: { user: { select: { name: true } } },
+      include: { user: { select: { name: true, surname: true } } },
       orderBy: [{ expenseDate: "desc" }, { createdAt: "desc" }],
     }),
     manager
       ? prisma.user.findMany({
           where: { role: "employee" },
-          select: { id: true, name: true },
-          orderBy: { name: "asc" },
+          select: { id: true, name: true, surname: true },
+          orderBy: [{ surname: "asc" }, { name: "asc" }],
         })
       : Promise.resolve([]),
   ]);
+
+  const teamUsers = teamRows.map((u) => ({ id: u.id, name: fullName(u) }));
 
   return (
     <div className="space-y-6">
@@ -122,7 +125,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
                     </Link>
                   </td>
                   {manager && (
-                    <td className="px-4 py-3 text-muted">{expense.user.name}</td>
+                    <td className="px-4 py-3 text-muted">{fullName(expense.user)}</td>
                   )}
                   <td className="px-4 py-3 text-muted">
                     {expense.category

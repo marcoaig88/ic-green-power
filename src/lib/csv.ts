@@ -1,4 +1,5 @@
 import { CATEGORY_LABELS, STATUS_LABELS, formatDate } from "@/lib/format";
+import { fullName } from "@/lib/user";
 
 type CsvExpense = {
   expenseDate: Date | null;
@@ -17,7 +18,7 @@ type CsvExpense = {
   vatAmount: number | null;
   vatRate: number | null;
   status: string;
-  user: { name: string; email: string };
+  user: { name: string; surname?: string | null; email: string };
 };
 
 function escapeCsv(value: string) {
@@ -57,7 +58,7 @@ export function expensesToCsv(expenses: CsvExpense[]) {
   const rows = expenses.map((expense) => [
     cell(formatDate(expense.expenseDate || expense.createdAt)),
     cell(expense.merchant || ""),
-    cell(expense.user.name),
+    cell(fullName(expense.user)),
     cell(expense.user.email),
     cell(
       expense.category

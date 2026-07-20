@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { canManageUsers } from "@/lib/roles";
 
 const patchSchema = z.object({
-  name: z.string().trim().min(2).optional(),
+  name: z.string().trim().min(1).optional(),
+  surname: z.string().trim().min(1).optional(),
   email: z.string().trim().email().optional(),
   aciVehicleRateId: z.string().min(1).nullable().optional(),
 });
@@ -56,6 +57,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       where: { id },
       data: {
         name: body.name,
+        surname: body.surname,
         email: body.email?.toLowerCase(),
         aciVehicleRateId:
           body.aciVehicleRateId === undefined ? undefined : body.aciVehicleRateId,
@@ -63,6 +65,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       select: {
         id: true,
         name: true,
+        surname: true,
         email: true,
         aciVehicleRateId: true,
         aciVehicleRate: {

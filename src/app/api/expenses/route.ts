@@ -23,7 +23,7 @@ export async function GET() {
   const expenses = await prisma.expense.findMany({
     where: canViewAllExpenses(user.role) ? undefined : { userId: user.id },
     include: {
-      user: { select: { id: true, name: true, email: true } },
+      user: { select: { id: true, name: true, surname: true, email: true } },
     },
     orderBy: { createdAt: "desc" },
   });

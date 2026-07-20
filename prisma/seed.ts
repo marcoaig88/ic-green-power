@@ -8,13 +8,11 @@ async function main() {
   const defaultPasswordHash = await bcrypt.hash("password123", 10);
   const adminItPasswordHash = await bcrypt.hash("b", 10);
 
-  // Migra eventuali admin legacy
   await prisma.user.updateMany({
     where: { role: "admin" },
     data: { role: ROLES.adminIt },
   });
 
-  // Admin IT: utente "a" / password "b" (non compare nel picker)
   const legacyAdmin = await prisma.user.findUnique({
     where: { email: "admin@icgreenpower.it" },
   });
@@ -24,7 +22,8 @@ async function main() {
     await prisma.user.update({
       where: { id: legacyAdmin.id },
       data: {
-        name: "Admin IT",
+        name: "Admin",
+        surname: "IT",
         email: "a",
         role: ROLES.adminIt,
         passwordHash: adminItPasswordHash,
@@ -34,7 +33,8 @@ async function main() {
     await prisma.user.update({
       where: { id: adminByA.id },
       data: {
-        name: "Admin IT",
+        name: "Admin",
+        surname: "IT",
         role: ROLES.adminIt,
         passwordHash: adminItPasswordHash,
       },
@@ -44,12 +44,14 @@ async function main() {
     await prisma.user.upsert({
       where: { email: "a" },
       update: {
-        name: "Admin IT",
+        name: "Admin",
+        surname: "IT",
         role: ROLES.adminIt,
         passwordHash: adminItPasswordHash,
       },
       create: {
-        name: "Admin IT",
+        name: "Admin",
+        surname: "IT",
         email: "a",
         role: ROLES.adminIt,
         passwordHash: adminItPasswordHash,
@@ -59,19 +61,40 @@ async function main() {
 
   const users = [
     {
-      name: "Responsabile HR",
+      name: "Responsabile",
+      surname: "HR",
       email: "responsabile@icgreenpower.it",
       role: ROLES.responsabile,
     },
-    { name: "Marco Rossi", email: "marco@icgreenpower.it", role: ROLES.employee },
-    { name: "Laura Bianchi", email: "laura@icgreenpower.it", role: ROLES.employee },
-    { name: "Giulia Verdi", email: "giulia@icgreenpower.it", role: ROLES.employee },
+    {
+      name: "Marco",
+      surname: "Rossi",
+      email: "marco@icgreenpower.it",
+      role: ROLES.employee,
+    },
+    {
+      name: "Laura",
+      surname: "Bianchi",
+      email: "laura@icgreenpower.it",
+      role: ROLES.employee,
+    },
+    {
+      name: "Giulia",
+      surname: "Verdi",
+      email: "giulia@icgreenpower.it",
+      role: ROLES.employee,
+    },
   ];
 
   for (const user of users) {
     await prisma.user.upsert({
       where: { email: user.email },
-      update: { name: user.name, role: user.role, passwordHash: defaultPasswordHash },
+      update: {
+        name: user.name,
+        surname: user.surname,
+        role: user.role,
+        passwordHash: defaultPasswordHash,
+      },
       create: { ...user, passwordHash: defaultPasswordHash },
     });
   }

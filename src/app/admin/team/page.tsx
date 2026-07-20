@@ -13,10 +13,11 @@ export default async function AdminTeamPage() {
 
   const users = await prisma.user.findMany({
     where: { role: "employee" },
-    orderBy: { name: "asc" },
+    orderBy: [{ surname: "asc" }, { name: "asc" }],
     select: {
       id: true,
       name: true,
+      surname: true,
       email: true,
       aciVehicleRateId: true,
       aciVehicleRate: {

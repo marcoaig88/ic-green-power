@@ -28,7 +28,7 @@ type Params = { params: Promise<{ id: string }> };
 async function getAccessibleExpense(id: string, userId: string, role: string) {
   const expense = await prisma.expense.findUnique({
     where: { id },
-    include: { user: { select: { id: true, name: true, email: true } } },
+    include: { user: { select: { id: true, name: true, surname: true, email: true } } },
   });
   if (!expense) return null;
   if (!canViewAllExpenses(role) && expense.userId !== userId) return null;
@@ -97,7 +97,7 @@ export async function PATCH(request: Request, { params }: Params) {
         routeTo: body.routeTo,
         status: body.status,
       },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: { user: { select: { id: true, name: true, surname: true, email: true } } },
     });
 
     return NextResponse.json({ expense });

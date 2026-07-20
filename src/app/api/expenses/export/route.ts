@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
   const expenses = await prisma.expense.findMany({
     where,
-    include: { user: { select: { name: true, email: true } } },
+    include: { user: { select: { name: true, surname: true, email: true } } },
     orderBy: [{ expenseDate: "desc" }, { createdAt: "desc" }],
   });
 

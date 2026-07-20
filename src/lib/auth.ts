@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "./prisma";
+import { fullName } from "./user";
 
 const COOKIE_NAME = "icgp_session";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 14; // 14 days
@@ -81,7 +82,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
     return {
       id: user.id,
-      name: user.name,
+      name: fullName(user),
       email: user.email,
       role: user.role,
     };

@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { LoginPicker } from "@/components/LoginPicker";
 import { homePathForRole, isAdminIt, isManager } from "@/lib/roles";
+import { fullName } from "@/lib/user";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +13,19 @@ export default async function LoginPage() {
 
   try {
     const users = await prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true },
-      orderBy: [{ role: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, surname: true, email: true, role: true },
+      orderBy: [{ role: "asc" }, { surname: "asc" }, { name: "asc" }],
     });
 
     // Admin IT non compare tra i profili selezionabili
-    const selectable = users.filter((u) => !isAdminIt(u.role));
+    const selectable = users
+      .filter((u) => !isAdminIt(u.role))
+      .map((u) => ({
+        id: u.id,
+        name: fullName(u),
+        email: u.email,
+        role: u.role,
+      }));
     const sorted = [...selectable].sort((a, b) => {
       const rank = (role: string) => (isManager(role) ? 0 : 1);
       const diff = rank(a.role) - rank(b.role);

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { setSession } from "@/lib/auth";
 import { isAdminIt } from "@/lib/roles";
+import { fullName } from "@/lib/user";
 
 const bodySchema = z.union([
   z.object({ userId: z.string().min(1) }),
@@ -43,15 +44,21 @@ export async function POST(request: Request) {
       }
     }
 
+    const displayName = fullName(user);
     await setSession({
       id: user.id,
-      name: user.name,
+      name: displayName,
       email: user.email,
       role: user.role,
     });
 
     return NextResponse.json({
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user.id,
+        name: displayName,
+        email: user.email,
+        role: user.role,
+      },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
