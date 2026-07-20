@@ -17,7 +17,15 @@ import {
 export const dynamic = "force-dynamic";
 
 function startOfMonth(d = new Date()) {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 0, 0, 0, 0));
+  const rome = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+  const [y, m] = rome.split("-").map(Number);
+  // 00:00 del giorno 1 a Roma (CEST +02 in estate; in inverno resta comunque nello stesso mese)
+  return new Date(`${y}-${String(m).padStart(2, "0")}-01T00:00:00+02:00`);
 }
 
 function sumAmounts(rows: { amount: number | null }[]) {
@@ -25,34 +33,49 @@ function sumAmounts(rows: { amount: number | null }[]) {
 }
 
 function monthKey(date: Date) {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+  const rome = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+  }).format(date);
+  return rome.slice(0, 7); // YYYY-MM
 }
 
 function buildMonthSeries(
-  expenses: { amount: number | null; expenseDate: Date | null; createdAt: Date }[],
+  expenses: { amount: number | null; createdAt: Date }[],
   monthsBack = 6,
 ) {
   const now = new Date();
+  const romeNow = monthKey(now);
+  const [y0, m0] = romeNow.split("-").map(Number);
   const keys: string[] = [];
   for (let i = monthsBack - 1; i >= 0; i -= 1) {
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
-    keys.push(monthKey(d));
+    let y = y0;
+    let m = m0 - i;
+    while (m <= 0) {
+      m += 12;
+      y -= 1;
+    }
+    keys.push(`${y}-${String(m).padStart(2, "0")}`);
   }
 
   const totals = new Map(keys.map((key) => [key, { total: 0, count: 0 }]));
   for (const expense of expenses) {
-    const date = expense.expenseDate || expense.createdAt;
-    const key = monthKey(date);
+    const key = monthKey(expense.createdAt);
     const bucket = totals.get(key);
     if (!bucket) continue;
     bucket.total += expense.amount || 0;
     bucket.count += 1;
   }
 
-  const formatter = new Intl.DateTimeFormat("it-IT", { month: "short", year: "2-digit" });
+  const formatter = new Intl.DateTimeFormat("it-IT", {
+    month: "short",
+    year: "2-digit",
+    timeZone: "Europe/Rome",
+  });
   return keys.map((key) => {
     const [y, m] = key.split("-").map(Number);
-    const label = formatter.format(new Date(Date.UTC(y, m - 1, 1)));
+    const label = formatter.format(new Date(Date.UTC(y, m - 1, 15)));
     const bucket = totals.get(key)!;
     return { label, total: bucket.total, count: bucket.count };
   });
@@ -86,10 +109,9 @@ export default async function AdminDashboardPage() {
     loadPendingExpenses(actor),
   ]);
 
-  const monthExpenses = allExpenses.filter((expense) => {
-    const date = expense.expenseDate || expense.createdAt;
-    return date >= monthStart;
-  });
+  const monthExpenses = allExpenses.filter(
+    (expense) => expense.createdAt >= monthStart,
+  );
 
   const monthSubmittedOrApproved = monthExpenses.filter(
     (e) => e.status === "submitted" || e.status === "approved",
@@ -134,20 +156,6 @@ export default async function AdminDashboardPage() {
           <h1 className="brand-title brand-title--ink text-3xl sm:text-4xl">Dashboard</h1>
           <p className="brand-subtitle brand-subtitle--ink mt-1 text-sm">{subtitle}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <a
-            href="/api/expenses/export"
-            className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-semibold text-ink hover:border-brand"
-          >
-            Esporta CSV
-          </a>
-          <Link
-            href="/expenses"
-            className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-semibold text-ink hover:border-brand"
-          >
-            Note spese
-          </Link>
-        </div>
       </div>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -181,15 +189,15 @@ export default async function AdminDashboardPage() {
         <Kpi
           label="Approvato nel mese"
           value={formatMoney(monthApproved)}
-          hint="Solo spese approvate"
+          hint="Approvate · data caricamento"
         />
         <Kpi
           label="Totale mese"
           value={formatMoney(monthAll)}
           hint={
             isCoo(user.role)
-              ? "CFO · (escluse bozze e rifiutate)"
-              : "(escluse bozze e rifiutate)"
+              ? "CFO · caricamento (escl. bozze/rifiutate)"
+              : "Data caricamento (escl. bozze e rifiutate)"
           }
         />
       </section>
