@@ -92,9 +92,14 @@ export function ExpenseForm({
   const inQueue = Boolean(queue && queue.ids.length > 0);
   const isLastInQueue = inQueue && queue!.index >= queue!.ids.length - 1;
 
+  function goHome() {
+    router.push("/");
+    router.refresh();
+  }
+
   function goNextInQueue(removedId?: string) {
     if (!queue) {
-      router.push("/expenses");
+      goHome();
       return;
     }
 
@@ -104,7 +109,7 @@ export function ExpenseForm({
     const nextIndex = removedId ? queue.index : queue.index + 1;
 
     if (remaining.length === 0 || nextIndex >= remaining.length) {
-      router.push("/expenses");
+      goHome();
       return;
     }
 
@@ -183,9 +188,14 @@ export function ExpenseForm({
           return;
         }
         if (options?.status === "submitted") {
-          router.push("/expenses");
+          goHome();
           return;
         }
+      }
+
+      if (options?.status === "approved" || options?.status === "rejected") {
+        goHome();
+        return;
       }
 
       router.refresh();
