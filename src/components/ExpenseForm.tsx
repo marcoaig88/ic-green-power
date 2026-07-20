@@ -113,6 +113,14 @@ export function ExpenseForm({
     router.refresh();
   }
 
+  function goBack() {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    goHome();
+  }
+
   function goNextInQueue(removedId?: string) {
     if (!queue) {
       goHome();
@@ -514,6 +522,14 @@ export function ExpenseForm({
         )}
 
         <div className="flex flex-wrap gap-3 pt-2">
+          <button
+            type="button"
+            disabled={saving}
+            onClick={goBack}
+            className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-medium text-muted transition hover:border-brand hover:text-ink disabled:opacity-60"
+          >
+            Indietro
+          </button>
           {isDraft && !(inQueue && !isLastInQueue) && (
             <button
               type="button"
