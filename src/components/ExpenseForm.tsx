@@ -353,7 +353,10 @@ export function ExpenseForm({
 
         {!mileage && (
           <>
-            <AiConfidenceBadge value={expense.aiConfidence} size="lg" />
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted">Confidenza AI</span>
+              <AiConfidenceBadge value={expense.aiConfidence} />
+            </div>
             {extractionError && (
               <p className="rounded-md border border-warn/40 bg-[#fff8e8] px-3 py-2 text-sm text-warn">
                 Estrazione AI non riuscita: {extractionError}. Compila i campi a mano.
@@ -639,14 +642,16 @@ export function ExpenseForm({
         )}
 
         <div className="flex flex-wrap gap-3 pt-2">
-          <button
-            type="button"
-            disabled={saving}
-            onClick={goBack}
-            className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-medium text-muted transition hover:border-brand hover:text-ink disabled:opacity-60"
-          >
-            Indietro
-          </button>
+          {!isDraft && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={goBack}
+              className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-medium text-muted transition hover:border-brand hover:text-ink disabled:opacity-60"
+            >
+              Indietro
+            </button>
+          )}
           {isDraft && !(inQueue && !isLastInQueue) && (
             <button
               type="button"
