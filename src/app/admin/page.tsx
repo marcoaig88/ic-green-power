@@ -201,29 +201,21 @@ export default async function AdminDashboardPage() {
       </section>
 
       <section className="rounded-xl border border-line bg-white/80 p-5">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2 className="font-display text-lg font-bold text-brand-deep">
-              {isCoo(user.role)
-                ? "Da approvare (CFO)"
-                : isAdminIt(user.role)
-                  ? "In attesa di approvazione"
-                  : "Da approvare"}
-            </h2>
-            <p className="mt-0.5 text-xs text-muted">
-              {pendingCount === 0
-                ? "Nessuna spesa in attesa"
-                : isAdminIt(user.role)
-                  ? `${pendingCount} · ${formatMoney(pendingTotal)} · solo lettura`
-                  : `${pendingCount} · ${formatMoney(pendingTotal)}`}
-            </p>
-          </div>
-          <Link
-            href="/expenses?status=submitted"
-            className="text-sm font-semibold text-brand hover:text-brand-deep"
-          >
-            Filtra in Note spese →
-          </Link>
+        <div className="mb-4">
+          <h2 className="font-display text-lg font-bold text-brand-deep">
+            {isCoo(user.role)
+              ? "Da approvare (CFO)"
+              : isAdminIt(user.role)
+                ? "In attesa di approvazione"
+                : "Da approvare"}
+          </h2>
+          <p className="mt-0.5 text-xs text-muted">
+            {pendingCount === 0
+              ? "Nessuna spesa in attesa"
+              : isAdminIt(user.role)
+                ? `${pendingCount} · ${formatMoney(pendingTotal)} · solo lettura`
+                : `${pendingCount} · ${formatMoney(pendingTotal)}`}
+          </p>
         </div>
         <PendingApprovals
           expenses={(isAdminIt(user.role) ? pendingReadOnly : pendingApprovable).map(
