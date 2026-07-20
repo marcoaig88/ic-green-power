@@ -1,6 +1,10 @@
 import type { Prisma } from "@prisma/client";
 import { CATEGORY_LABELS, dayRangeFromInputs } from "@/lib/format";
-import { canViewAllExpenses } from "@/lib/roles";
+import {
+  canViewAllExpenses,
+  expenseDashboardWhere,
+  expenseListWhere,
+} from "@/lib/roles";
 
 export const EXPENSE_STATUSES = ["draft", "submitted", "approved", "rejected"] as const;
 export const EXPENSE_CATEGORIES = Object.keys(CATEGORY_LABELS);
@@ -32,13 +36,25 @@ export function parseExpenseFilters(params: ExpenseFilterParams): ExpenseFilterV
 
 export function buildExpenseWhere(
   filters: ExpenseFilterValues,
-  options: { role: string; sessionUserId: string },
+  options: {
+    role: string;
+    sessionUserId: string;
+    /** dashboard = per COO solo spese CFO; list = default */
+    scope?: "list" | "dashboard";
+  },
 ): Prisma.ExpenseWhereInput {
   const andFilters: Prisma.ExpenseWhereInput[] = [];
+  const session = { id: options.sessionUserId, role: options.role };
+  const visibility =
+    options.scope === "dashboard"
+      ? expenseDashboardWhere(session)
+      : expenseListWhere(session);
 
-  if (!canViewAllExpenses(options.role)) {
-    andFilters.push({ userId: options.sessionUserId });
-  } else if (filters.userId) {
+  if (Object.keys(visibility).length > 0) {
+    andFilters.push(visibility);
+  }
+
+  if (canViewAllExpenses(options.role) && filters.userId) {
     andFilters.push({ userId: filters.userId });
   }
 

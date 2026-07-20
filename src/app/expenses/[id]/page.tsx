@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ExpenseForm } from "@/components/ExpenseForm";
-import { canApproveExpenses, canViewAllExpenses } from "@/lib/roles";
+import { canAccessExpense, canApproveExpense } from "@/lib/roles";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -17,15 +17,20 @@ export default async function ExpenseDetailPage({ params, searchParams }: Props)
   const { aiError } = await searchParams;
   const expense = await prisma.expense.findUnique({
     where: { id },
-    include: { user: { select: { name: true } } },
+    include: { user: { select: { name: true, role: true } } },
   });
 
   if (!expense) notFound();
-  if (!canViewAllExpenses(user.role) && expense.userId !== user.id) notFound();
+  if (!canAccessExpense(user, { userId: expense.userId, user: expense.user })) {
+    notFound();
+  }
 
   return (
     <ExpenseForm
-      isAdmin={canApproveExpenses(user.role)}
+      isAdmin={canApproveExpense(user, {
+        userId: expense.userId,
+        user: expense.user,
+      })}
       aiError={aiError || null}
       expense={{
         id: expense.id,

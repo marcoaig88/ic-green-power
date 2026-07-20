@@ -3,7 +3,12 @@ import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { deleteUpload } from "@/lib/files";
-import { canApproveExpenses, canViewAllExpenses } from "@/lib/roles";
+import {
+  canAccessExpense,
+  canApproveExpense,
+  canViewAllExpenses,
+  isManager,
+} from "@/lib/roles";
 
 const updateSchema = z.object({
   merchant: z.string().nullable().optional(),
@@ -25,13 +30,17 @@ const updateSchema = z.object({
 
 type Params = { params: Promise<{ id: string }> };
 
-async function getAccessibleExpense(id: string, userId: string, role: string) {
+async function getAccessibleExpense(id: string, actor: { id: string; role: string }) {
   const expense = await prisma.expense.findUnique({
     where: { id },
-    include: { user: { select: { id: true, name: true, surname: true, email: true } } },
+    include: {
+      user: { select: { id: true, name: true, surname: true, email: true, role: true } },
+    },
   });
   if (!expense) return null;
-  if (!canViewAllExpenses(role) && expense.userId !== userId) return null;
+  if (!canAccessExpense(actor, { userId: expense.userId, user: expense.user })) {
+    return null;
+  }
   return expense;
 }
 
@@ -42,7 +51,7 @@ export async function GET(_request: Request, { params }: Params) {
   }
 
   const { id } = await params;
-  const expense = await getAccessibleExpense(id, user.id, user.role);
+  const expense = await getAccessibleExpense(id, user);
   if (!expense) {
     return NextResponse.json({ error: "Nota spesa non trovata" }, { status: 404 });
   }
@@ -57,7 +66,7 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const { id } = await params;
-  const existing = await getAccessibleExpense(id, user.id, user.role);
+  const existing = await getAccessibleExpense(id, user);
   if (!existing) {
     return NextResponse.json({ error: "Nota spesa non trovata" }, { status: 404 });
   }
@@ -65,12 +74,22 @@ export async function PATCH(request: Request, { params }: Params) {
   try {
     const body = updateSchema.parse(await request.json());
 
-    if (
-      body.status &&
-      (body.status === "approved" || body.status === "rejected") &&
-      !canApproveExpenses(user.role)
-    ) {
-      return NextResponse.json({ error: "Solo COO/CFO/Admin IT può approvare/rifiutare" }, { status: 403 });
+    if (body.status && (body.status === "approved" || body.status === "rejected")) {
+      if (
+        !canApproveExpense(user, {
+          userId: existing.userId,
+          user: existing.user,
+        })
+      ) {
+        return NextResponse.json(
+          {
+            error: isManager(user.role)
+              ? "Non puoi approvare questa nota spesa"
+              : "Solo COO/CFO/Admin IT può approvare/rifiutare",
+          },
+          { status: 403 },
+        );
+      }
     }
 
     const expense = await prisma.expense.update({
@@ -97,7 +116,9 @@ export async function PATCH(request: Request, { params }: Params) {
         routeTo: body.routeTo,
         status: body.status,
       },
-      include: { user: { select: { id: true, name: true, surname: true, email: true } } },
+      include: {
+        user: { select: { id: true, name: true, surname: true, email: true, role: true } },
+      },
     });
 
     return NextResponse.json({ expense });
@@ -117,7 +138,7 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   const { id } = await params;
-  const existing = await getAccessibleExpense(id, user.id, user.role);
+  const existing = await getAccessibleExpense(id, user);
   if (!existing) {
     return NextResponse.json({ error: "Nota spesa non trovata" }, { status: 404 });
   }

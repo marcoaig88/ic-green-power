@@ -20,9 +20,19 @@ export type PendingExpense = {
   km?: number | null;
   user: { name: string };
   status: string;
+  /** Se false, niente tasto Approva */
+  canApprove?: boolean;
+  /** Evidenzia (es. spese proprie CFO in attesa del COO) */
+  highlight?: boolean;
 };
 
-export function PendingApprovals({ expenses }: { expenses: PendingExpense[] }) {
+export function PendingApprovals({
+  expenses,
+  emptyMessage = "Nessuna spesa in attesa. Ottimo lavoro.",
+}: {
+  expenses: PendingExpense[];
+  emptyMessage?: string;
+}) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +63,7 @@ export function PendingApprovals({ expenses }: { expenses: PendingExpense[] }) {
   }
 
   if (items.length === 0) {
-    return <p className="text-sm text-muted">Nessuna spesa in attesa. Ottimo lavoro.</p>;
+    return <p className="text-sm text-muted">{emptyMessage}</p>;
   }
 
   return (
@@ -66,10 +76,15 @@ export function PendingApprovals({ expenses }: { expenses: PendingExpense[] }) {
       <ul className="divide-y divide-line/70">
         {items.map((expense) => {
           const mileage = isMileageExpense(expense);
+          const allowApprove = expense.canApprove !== false;
           return (
             <li
               key={expense.id}
-              className="flex flex-wrap items-center justify-between gap-3 py-3"
+              className={`flex flex-wrap items-center justify-between gap-3 py-3 ${
+                expense.highlight
+                  ? "-mx-2 rounded-lg border border-amber-300/80 bg-amber-50 px-2"
+                  : ""
+              }`}
             >
               <div className="min-w-0">
                 <Link
@@ -82,6 +97,11 @@ export function PendingApprovals({ expenses }: { expenses: PendingExpense[] }) {
                   {expense.user.name} ·{" "}
                   {formatDate(expense.expenseDate || expense.createdAt)}
                 </p>
+                {expense.highlight && (
+                  <p className="mt-1 text-xs font-semibold text-amber-800">
+                    In attesa del COO — non puoi approvare le tue spese
+                  </p>
+                )}
               </div>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 {!mileage && <AiConfidenceBadge value={expense.aiConfidence} />}
@@ -89,14 +109,20 @@ export function PendingApprovals({ expenses }: { expenses: PendingExpense[] }) {
                   {formatMoney(expense.amount, expense.currency)}
                 </span>
                 <StatusBadge status={expense.status} />
-                <button
-                  type="button"
-                  disabled={busyId === expense.id}
-                  onClick={() => approve(expense.id)}
-                  className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-deep disabled:opacity-60"
-                >
-                  {busyId === expense.id ? "…" : "Approva"}
-                </button>
+                {allowApprove ? (
+                  <button
+                    type="button"
+                    disabled={busyId === expense.id}
+                    onClick={() => approve(expense.id)}
+                    className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-deep disabled:opacity-60"
+                  >
+                    {busyId === expense.id ? "…" : "Approva"}
+                  </button>
+                ) : (
+                  <span className="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800">
+                    Solo COO
+                  </span>
+                )}
               </div>
             </li>
           );

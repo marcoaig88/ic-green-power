@@ -13,7 +13,14 @@ import { ExpenseFilters } from "@/components/ExpenseFilters";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { PendingApprovals } from "@/components/PendingApprovals";
 import { fullName } from "@/lib/user";
-import { teamUsersWhere } from "@/lib/roles";
+import {
+  ROLES,
+  canApproveExpense,
+  isCfo,
+  isCoo,
+  isCfoOwnPending,
+  teamUsersWhere,
+} from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -67,13 +74,19 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   const user = await getSessionUser();
   if (!user) return null;
 
+  const actor = { id: user.id, role: user.role };
   const filters = parseExpenseFilters(await searchParams);
   const where = buildExpenseWhere(filters, {
     role: user.role,
     sessionUserId: user.id,
+    scope: "dashboard",
   });
   const monthStart = startOfMonth();
   const filtered = hasActiveExpenseFilters(filters);
+
+  const teamWhere = isCoo(user.role)
+    ? { role: ROLES.cfo }
+    : teamUsersWhere;
 
   const [allExpenses, pending, team] = await Promise.all([
     prisma.expense.findMany({
@@ -88,7 +101,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         expenseDate: true,
         createdAt: true,
         userId: true,
-        user: { select: { id: true, name: true, surname: true } },
+        user: { select: { id: true, name: true, surname: true, role: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -107,13 +120,14 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         category: true,
         km: true,
         status: true,
-        user: { select: { name: true, surname: true } },
+        userId: true,
+        user: { select: { name: true, surname: true, role: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
     prisma.user.findMany({
-      where: teamUsersWhere,
-      select: { id: true, name: true, surname: true, email: true },
+      where: teamWhere,
+      select: { id: true, name: true, surname: true, email: true, role: true },
       orderBy: [{ surname: "asc" }, { name: "asc" }],
     }),
   ]);
@@ -138,8 +152,16 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     monthExpenses.filter((e) => e.status === "approved"),
   );
   const monthAll = sumAmounts(monthExpenses);
-  const pendingCount = byStatus.find((s) => s.status === "submitted")?.count || 0;
-  const pendingTotal = byStatus.find((s) => s.status === "submitted")?.total || 0;
+
+  const pendingApprovable = pending.filter((e) =>
+    canApproveExpense(actor, { userId: e.userId, user: e.user }),
+  );
+  const pendingOwnCfo = isCfo(user.role)
+    ? pending.filter((e) => isCfoOwnPending(actor, e))
+    : [];
+
+  const pendingCount = pendingApprovable.length;
+  const pendingTotal = sumAmounts(pendingApprovable);
   const filteredTotal = sumAmounts(allExpenses);
 
   const monthLabel = new Intl.DateTimeFormat("it-IT", {
@@ -157,16 +179,20 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   }).toString();
   const pendingListHref = `/expenses?${pendingListParams}`;
 
+  const subtitle = isCoo(user.role)
+    ? filtered
+      ? `Vista CFO filtrata · ${allExpenses.length} spese · ${formatMoney(filteredTotal)}`
+      : `Solo note spese del CFO · ${monthLabel}`
+    : filtered
+      ? `Vista filtrata · ${allExpenses.length} spese · ${formatMoney(filteredTotal)}`
+      : `Panoramica note spese · ${monthLabel}`;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="brand-title brand-title--ink text-3xl sm:text-4xl">Dashboard</h1>
-          <p className="brand-subtitle brand-subtitle--ink mt-1 text-sm">
-            {filtered
-              ? `Vista filtrata · ${allExpenses.length} spese · ${formatMoney(filteredTotal)}`
-              : `Panoramica note spese · ${monthLabel}`}
-          </p>
+          <p className="brand-subtitle brand-subtitle--ink mt-1 text-sm">{subtitle}</p>
         </div>
         <a
           href={exportHref}
@@ -191,7 +217,9 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
           hint={
             filtered
               ? `${allExpenses.length} spese selezionate`
-              : "Tutte le spese del mese"
+              : isCoo(user.role)
+                ? "Spese del CFO nel mese"
+                : "Tutte le spese del mese"
           }
         />
         <Kpi
@@ -211,7 +239,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="font-display text-lg font-bold text-brand-deep">
-              Da approvare
+              {isCoo(user.role) ? "Da approvare (CFO)" : "Da approvare"}
             </h2>
             <p className="mt-0.5 text-xs text-muted">
               {pendingCount === 0
@@ -227,12 +255,40 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
           </Link>
         </div>
         <PendingApprovals
-          expenses={pending.map((expense) => ({
+          expenses={pendingApprovable.map((expense) => ({
             ...expense,
             user: { name: fullName(expense.user) },
+            canApprove: true,
           }))}
+          emptyMessage={
+            isCoo(user.role)
+              ? "Nessuna spesa del CFO in attesa."
+              : "Nessuna spesa in attesa. Ottimo lavoro."
+          }
         />
       </section>
+
+      {pendingOwnCfo.length > 0 && (
+        <section className="rounded-xl border border-amber-300/80 bg-amber-50/80 p-5">
+          <div className="mb-4">
+            <h2 className="font-display text-lg font-bold text-amber-950">
+              Le tue spese (in attesa del COO)
+            </h2>
+            <p className="mt-0.5 text-xs text-amber-900/80">
+              Non puoi approvare le tue note spese — le gestisce il COO ·{" "}
+              {pendingOwnCfo.length} · {formatMoney(sumAmounts(pendingOwnCfo))}
+            </p>
+          </div>
+          <PendingApprovals
+            expenses={pendingOwnCfo.map((expense) => ({
+              ...expense,
+              user: { name: fullName(expense.user) },
+              canApprove: false,
+              highlight: true,
+            }))}
+          />
+        </section>
+      )}
 
       <DashboardCharts byStatus={byStatus} byMonth={byMonth} />
     </div>

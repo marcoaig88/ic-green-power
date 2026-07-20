@@ -11,7 +11,15 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ExpenseFilters } from "@/components/ExpenseFilters";
 import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
 import { QuickApproveButton } from "@/components/QuickApproveButton";
-import { canApproveExpenses, canViewAllExpenses, teamUsersWhere } from "@/lib/roles";
+import {
+  ROLES,
+  canApproveExpense,
+  canApproveExpenses,
+  canViewAllExpenses,
+  isCfoOwnPending,
+  isCoo,
+  teamUsersWhere,
+} from "@/lib/roles";
 import { fullName } from "@/lib/user";
 import { isMileageExpense } from "@/lib/mileage";
 
@@ -23,6 +31,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
   const user = await getSessionUser();
   if (!user) return null;
 
+  const actor = { id: user.id, role: user.role };
   const params = await searchParams;
   const filters = parseExpenseFilters(params);
   const finalWhere = buildExpenseWhere(filters, {
@@ -30,17 +39,19 @@ export default async function ExpensesPage({ searchParams }: Props) {
     sessionUserId: user.id,
   });
   const manager = canViewAllExpenses(user.role);
-  const canApprove = canApproveExpenses(user.role);
+  const showApproveCol = canApproveExpenses(user.role);
+
+  const teamWhere = isCoo(user.role) ? { role: ROLES.cfo } : teamUsersWhere;
 
   const [expenses, teamRows] = await Promise.all([
     prisma.expense.findMany({
       where: finalWhere,
-      include: { user: { select: { name: true, surname: true } } },
+      include: { user: { select: { name: true, surname: true, role: true } } },
       orderBy: [{ expenseDate: "desc" }, { createdAt: "desc" }],
     }),
     manager
       ? prisma.user.findMany({
-          where: teamUsersWhere,
+          where: teamWhere,
           select: { id: true, name: true, surname: true },
           orderBy: [{ surname: "asc" }, { name: "asc" }],
         })
@@ -55,9 +66,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
         <div>
           <h1 className="brand-title brand-title--ink text-3xl sm:text-4xl">Note spese</h1>
           <p className="brand-subtitle brand-subtitle--ink mt-1 text-sm">
-            {manager
-              ? "Tutte le spese del team"
-              : "Le tue spese caricate e in lavorazione"}
+            {isCoo(user.role)
+              ? "Spese del CFO e le tue"
+              : manager
+                ? "Tutte le spese del team"
+                : "Le tue spese caricate e in lavorazione"}
           </p>
         </div>
         <Link
@@ -107,56 +120,81 @@ export default async function ExpensesPage({ searchParams }: Props) {
                 <th className="px-4 py-3 font-medium">Importo</th>
                 <th className="px-4 py-3 font-medium">AI</th>
                 <th className="px-4 py-3 font-medium">Stato</th>
-                {canApprove && (
+                {showApproveCol && (
                   <th className="px-4 py-3 font-medium">Azione</th>
                 )}
               </tr>
             </thead>
             <tbody>
-              {expenses.map((expense) => (
-                <tr key={expense.id} className="border-b border-line/70 last:border-0">
-                  <td className="px-4 py-3">
-                    <Link href={`/expenses/${expense.id}`} className="hover:text-brand">
-                      {formatDate(expense.expenseDate || expense.createdAt)}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/expenses/${expense.id}`} className="font-medium hover:text-brand">
-                      {expense.merchant || "Da completare"}
-                    </Link>
-                  </td>
-                  {manager && (
-                    <td className="px-4 py-3 text-muted">{fullName(expense.user)}</td>
-                  )}
-                  <td className="px-4 py-3 text-muted">
-                    {expense.category
-                      ? CATEGORY_LABELS[expense.category] || expense.category
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3 font-medium">
-                    {formatMoney(expense.amount, expense.currency)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {isMileageExpense(expense) ? (
-                      <span className="text-xs text-muted">—</span>
-                    ) : (
-                      <AiConfidenceBadge value={expense.aiConfidence} />
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={expense.status} />
-                  </td>
-                  {canApprove && (
+              {expenses.map((expense) => {
+                const ownPending = isCfoOwnPending(actor, expense);
+                const rowApprove =
+                  expense.status === "submitted" &&
+                  canApproveExpense(actor, {
+                    userId: expense.userId,
+                    user: expense.user,
+                  });
+
+                return (
+                  <tr
+                    key={expense.id}
+                    className={`border-b border-line/70 last:border-0 ${
+                      ownPending ? "bg-amber-50/80" : ""
+                    }`}
+                  >
                     <td className="px-4 py-3">
-                      {expense.status === "submitted" ? (
-                        <QuickApproveButton expenseId={expense.id} />
-                      ) : (
-                        <span className="text-xs text-muted">—</span>
+                      <Link href={`/expenses/${expense.id}`} className="hover:text-brand">
+                        {formatDate(expense.expenseDate || expense.createdAt)}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/expenses/${expense.id}`}
+                        className="font-medium hover:text-brand"
+                      >
+                        {expense.merchant || "Da completare"}
+                      </Link>
+                      {ownPending && (
+                        <p className="mt-0.5 text-xs font-semibold text-amber-800">
+                          In attesa del COO
+                        </p>
                       )}
                     </td>
-                  )}
-                </tr>
-              ))}
+                    {manager && (
+                      <td className="px-4 py-3 text-muted">{fullName(expense.user)}</td>
+                    )}
+                    <td className="px-4 py-3 text-muted">
+                      {expense.category
+                        ? CATEGORY_LABELS[expense.category] || expense.category
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3 font-medium">
+                      {formatMoney(expense.amount, expense.currency)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {isMileageExpense(expense) ? (
+                        <span className="text-xs text-muted">—</span>
+                      ) : (
+                        <AiConfidenceBadge value={expense.aiConfidence} />
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={expense.status} />
+                    </td>
+                    {showApproveCol && (
+                      <td className="px-4 py-3">
+                        {rowApprove ? (
+                          <QuickApproveButton expenseId={expense.id} />
+                        ) : ownPending ? (
+                          <span className="text-xs font-semibold text-amber-800">Solo COO</span>
+                        ) : (
+                          <span className="text-xs text-muted">—</span>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -164,3 +202,4 @@ export default async function ExpensesPage({ searchParams }: Props) {
     </div>
   );
 }
+

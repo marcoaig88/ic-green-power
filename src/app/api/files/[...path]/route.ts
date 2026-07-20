@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSignedFileUrl, readUpload } from "@/lib/files";
-import { canViewAllExpenses } from "@/lib/roles";
+import { canAccessExpense } from "@/lib/roles";
 
 type Params = { params: Promise<{ path: string[] }> };
 
@@ -22,13 +22,14 @@ export async function GET(_request: Request, { params }: Params) {
     where: {
       filePath: { endsWith: fileName },
     },
+    include: { user: { select: { role: true } } },
   });
 
   if (!expense?.filePath) {
     return NextResponse.json({ error: "File non trovato" }, { status: 404 });
   }
 
-  if (!canViewAllExpenses(user.role) && expense.userId !== user.id) {
+  if (!canAccessExpense(user, { userId: expense.userId, user: expense.user })) {
     return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
   }
 
