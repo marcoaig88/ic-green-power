@@ -109,30 +109,30 @@ export function MileageExpenseForm({
             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
               Veicolo assegnato
             </p>
-            <div className="mx-auto w-full max-w-md">
+            <div className="mx-auto w-full max-w-[220px] sm:max-w-[240px]">
               <svg
                 viewBox="0 0 420 180"
                 className="h-auto w-full drop-shadow-sm"
                 role="img"
               >
                 <title>{vehicleLabel}</title>
-                <ellipse cx="210" cy="162" rx="150" ry="10" fill="rgba(20,40,28,0.12)" />
+                <ellipse cx="210" cy="162" rx="150" ry="10" fill="rgba(20,40,28,0.08)" />
                 <path
                   d="M48 118c8-28 28-46 58-54l22-28c10-12 24-18 40-18h84c18 0 32 8 42 22l28 40c28 6 52 22 60 42v8c0 8-6 14-14 14H62c-8 0-14-6-14-14v-12z"
-                  fill="#1f6b3a"
+                  fill="#c8e6d0"
                 />
                 <path
                   d="M130 78h108c12 0 22 5 30 14l16 22H112l18-26c4-6 10-10 18-10z"
-                  fill="#2f8a4e"
+                  fill="#dff0e4"
                 />
-                <path d="M138 84h42l-10 28H128l10-28z" fill="#d7ebdd" />
-                <path d="M188 84h52l8 28h-68l8-28z" fill="#c5e0ce" />
-                <path d="M248 84h28c6 0 12 3 16 8l8 20h-60l8-28z" fill="#d7ebdd" />
+                <path d="M138 84h42l-10 28H128l10-28z" fill="#f4faf6" />
+                <path d="M188 84h52l8 28h-68l8-28z" fill="#eaf6ee" />
+                <path d="M248 84h28c6 0 12 3 16 8l8 20h-60l8-28z" fill="#f4faf6" />
                 <path
                   d="M210 112v36"
-                  stroke="#144928"
+                  stroke="#7fad8f"
                   strokeWidth="2"
-                  opacity="0.25"
+                  opacity="0.5"
                 />
                 <rect
                   x="222"
@@ -140,18 +140,17 @@ export function MileageExpenseForm({
                   width="14"
                   height="4"
                   rx="2"
-                  fill="#144928"
-                  opacity="0.45"
+                  fill="#7fad8f"
+                  opacity="0.7"
                 />
-                <ellipse cx="78" cy="120" rx="10" ry="7" fill="#f2c14e" opacity="0.9" />
-                <ellipse cx="348" cy="122" rx="8" ry="6" fill="#fff8e8" opacity="0.75" />
-                <circle cx="118" cy="148" r="22" fill="#1a2e24" />
-                <circle cx="118" cy="148" r="12" fill="#4f6354" />
-                <circle cx="118" cy="148" r="5" fill="#dcecdc" />
-                <circle cx="302" cy="148" r="22" fill="#1a2e24" />
-                <circle cx="302" cy="148" r="12" fill="#4f6354" />
-                <circle cx="302" cy="148" r="5" fill="#dcecdc" />
-                {/* Door panel with model name */}
+                <ellipse cx="78" cy="120" rx="10" ry="7" fill="#f7e7a8" opacity="0.95" />
+                <ellipse cx="348" cy="122" rx="8" ry="6" fill="#ffffff" opacity="0.85" />
+                <circle cx="118" cy="148" r="22" fill="#5a6f60" />
+                <circle cx="118" cy="148" r="12" fill="#8a9c8e" />
+                <circle cx="118" cy="148" r="5" fill="#e8f2eb" />
+                <circle cx="302" cy="148" r="22" fill="#5a6f60" />
+                <circle cx="302" cy="148" r="12" fill="#8a9c8e" />
+                <circle cx="302" cy="148" r="5" fill="#e8f2eb" />
                 <rect
                   x="148"
                   y="118"
@@ -159,7 +158,7 @@ export function MileageExpenseForm({
                   height="28"
                   rx="6"
                   fill="#ffffff"
-                  stroke="#144928"
+                  stroke="#9fbfa8"
                   strokeWidth="1.5"
                 />
                 <text
