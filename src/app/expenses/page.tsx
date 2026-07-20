@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { formatDate, formatMoney, CATEGORY_LABELS } from "@/lib/format";
 import {
   buildExpenseWhere,
+  expenseFiltersToSearchParams,
   parseExpenseFilters,
   type ExpenseFilterParams,
 } from "@/lib/expense-filters";
@@ -59,6 +60,10 @@ export default async function ExpensesPage({ searchParams }: Props) {
   ]);
 
   const teamUsers = teamRows.map((u) => ({ id: u.id, name: fullName(u) }));
+  const exportParams = expenseFiltersToSearchParams(filters).toString();
+  const exportHref = exportParams
+    ? `/api/expenses/export?${exportParams}`
+    : "/api/expenses/export";
 
   return (
     <div className="space-y-6">
@@ -73,12 +78,20 @@ export default async function ExpensesPage({ searchParams }: Props) {
                 : "Le tue spese caricate e in lavorazione"}
           </p>
         </div>
-        <Link
-          href="/expenses/new"
-          className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-deep"
-        >
-          Nuova spesa
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={exportHref}
+            className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-semibold text-ink hover:border-brand"
+          >
+            Esporta CSV
+          </a>
+          <Link
+            href="/expenses/new"
+            className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-deep"
+          >
+            Nuova spesa
+          </Link>
+        </div>
       </div>
 
       <ExpenseFilters

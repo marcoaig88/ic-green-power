@@ -2,32 +2,19 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { STATUS_LABELS, formatMoney } from "@/lib/format";
-import {
-  buildExpenseWhere,
-  expenseFiltersToSearchParams,
-  hasActiveExpenseFilters,
-  parseExpenseFilters,
-  type ExpenseFilterParams,
-} from "@/lib/expense-filters";
-import { ExpenseFilters } from "@/components/ExpenseFilters";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { PendingApprovals } from "@/components/PendingApprovals";
 import { fullName } from "@/lib/user";
 import {
-  ROLES,
   canApproveExpense,
+  expenseDashboardWhere,
   isAdminIt,
   isCfo,
   isCoo,
   isCfoOwnPending,
-  teamUsersWhere,
 } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
-
-type Props = {
-  searchParams: Promise<ExpenseFilterParams>;
-};
 
 function startOfMonth(d = new Date()) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 0, 0, 0, 0));
@@ -71,25 +58,15 @@ function buildMonthSeries(
   });
 }
 
-export default async function AdminDashboardPage({ searchParams }: Props) {
+export default async function AdminDashboardPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
   const actor = { id: user.id, role: user.role };
-  const filters = parseExpenseFilters(await searchParams);
-  const where = buildExpenseWhere(filters, {
-    role: user.role,
-    sessionUserId: user.id,
-    scope: "dashboard",
-  });
+  const where = expenseDashboardWhere(actor);
   const monthStart = startOfMonth();
-  const filtered = hasActiveExpenseFilters(filters);
 
-  const teamWhere = isCoo(user.role)
-    ? { role: ROLES.cfo }
-    : teamUsersWhere;
-
-  const [allExpenses, pending, team] = await Promise.all([
+  const [allExpenses, pending] = await Promise.all([
     prisma.expense.findMany({
       where,
       select: {
@@ -126,11 +103,6 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
       },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.user.findMany({
-      where: teamWhere,
-      select: { id: true, name: true, surname: true, email: true, role: true },
-      orderBy: [{ surname: "asc" }, { name: "asc" }],
-    }),
   ]);
 
   const monthExpenses = allExpenses.filter((expense) => {
@@ -160,7 +132,6 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   const pendingOwnCfo = isCfo(user.role)
     ? pending.filter((e) => isCfoOwnPending(actor, e))
     : [];
-  // Admin IT vede le pending ma senza poterle approvare
   const pendingReadOnly = isAdminIt(user.role) ? pending : [];
 
   const pendingCount = isAdminIt(user.role)
@@ -169,30 +140,15 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   const pendingTotal = isAdminIt(user.role)
     ? sumAmounts(pending)
     : sumAmounts(pendingApprovable);
-  const filteredTotal = sumAmounts(allExpenses);
 
   const monthLabel = new Intl.DateTimeFormat("it-IT", {
     month: "long",
     year: "numeric",
   }).format(new Date());
 
-  const exportParams = expenseFiltersToSearchParams(filters).toString();
-  const exportHref = exportParams
-    ? `/api/expenses/export?${exportParams}`
-    : "/api/expenses/export";
-  const pendingListParams = expenseFiltersToSearchParams({
-    ...filters,
-    status: "submitted",
-  }).toString();
-  const pendingListHref = `/expenses?${pendingListParams}`;
-
   const subtitle = isCoo(user.role)
-    ? filtered
-      ? `Vista CFO filtrata · ${allExpenses.length} spese · ${formatMoney(filteredTotal)}`
-      : `Solo note spese del CFO · ${monthLabel}`
-    : filtered
-      ? `Vista filtrata · ${allExpenses.length} spese · ${formatMoney(filteredTotal)}`
-      : `Panoramica note spese · ${monthLabel}`;
+    ? `Solo note spese del CFO · ${monthLabel}`
+    : `Panoramica note spese · ${monthLabel}`;
 
   return (
     <div className="space-y-8">
@@ -201,32 +157,28 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
           <h1 className="brand-title brand-title--ink text-3xl sm:text-4xl">Dashboard</h1>
           <p className="brand-subtitle brand-subtitle--ink mt-1 text-sm">{subtitle}</p>
         </div>
-        <a
-          href={exportHref}
-          className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-semibold text-ink hover:border-brand"
-        >
-          Esporta CSV
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href="/api/expenses/export"
+            className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-semibold text-ink hover:border-brand"
+          >
+            Esporta CSV
+          </a>
+          <Link
+            href="/expenses"
+            className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-semibold text-ink hover:border-brand"
+          >
+            Note spese
+          </Link>
+        </div>
       </div>
-
-      <ExpenseFilters
-        isAdmin
-        users={team.map((member) => ({ id: member.id, name: fullName(member) }))}
-        resultCount={allExpenses.length}
-        values={filters}
-        basePath="/admin"
-      />
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Kpi
-          label={filtered ? "Totale filtrato" : "Totale mese"}
-          value={formatMoney(filtered ? filteredTotal : monthAll)}
+          label="Totale mese"
+          value={formatMoney(monthAll)}
           hint={
-            filtered
-              ? `${allExpenses.length} spese selezionate`
-              : isCoo(user.role)
-                ? "Spese del CFO nel mese"
-                : "Tutte le spese del mese"
+            isCoo(user.role) ? "Spese del CFO nel mese" : "Tutte le spese del mese"
           }
         />
         <Kpi
@@ -261,10 +213,10 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
             </p>
           </div>
           <Link
-            href={pendingListHref}
+            href="/expenses?status=submitted"
             className="text-sm font-semibold text-brand hover:text-brand-deep"
           >
-            Vedi in lista →
+            Filtra in Note spese →
           </Link>
         </div>
         <PendingApprovals
