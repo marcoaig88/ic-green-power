@@ -14,7 +14,6 @@ import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
 import { QuickApproveButton } from "@/components/QuickApproveButton";
 import {
   CFO_ROLE_VALUES,
-  ROLES,
   canApproveExpense,
   canApproveExpenses,
   canViewAllExpenses,
@@ -45,7 +44,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
   const coo = isCoo(user.role);
 
   const teamWhere = coo
-    ? { role: { in: [...CFO_ROLE_VALUES] } }
+    ? {
+        OR: [{ role: { in: [...CFO_ROLE_VALUES] } }, { id: user.id }],
+      }
     : teamUsersWhere;
 
   const [expenses, teamRows] = await Promise.all([
@@ -57,13 +58,21 @@ export default async function ExpensesPage({ searchParams }: Props) {
     manager
       ? prisma.user.findMany({
           where: teamWhere,
-          select: { id: true, name: true, surname: true },
+          select: { id: true, name: true, surname: true, role: true },
           orderBy: [{ surname: "asc" }, { name: "asc" }],
         })
       : Promise.resolve([]),
   ]);
 
-  const teamUsers = teamRows.map((u) => ({ id: u.id, name: fullName(u) }));
+  // COO: se stesso in cima, poi CFO
+  const teamUsers = (coo
+    ? [...teamRows].sort((a, b) => {
+        if (a.id === user.id) return -1;
+        if (b.id === user.id) return 1;
+        return 0;
+      })
+    : teamRows
+  ).map((u) => ({ id: u.id, name: fullName(u) }));
   const exportParams = expenseFiltersToSearchParams(filters).toString();
   const exportHref = exportParams
     ? `/api/expenses/export?${exportParams}`
