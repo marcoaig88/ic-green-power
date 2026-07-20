@@ -1,13 +1,14 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { STATUS_LABELS, formatMoney } from "@/lib/format";
+import { CATEGORY_LABELS, formatMoney } from "@/lib/format";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import {
+  canAccessDashboard,
   canApproveExpenses,
   expenseDashboardWhere,
   isCfo,
-  isCoo,
 } from "@/lib/roles";
 import {
   loadPendingExpenses,
@@ -24,7 +25,6 @@ function startOfMonth(d = new Date()) {
     day: "2-digit",
   }).format(d);
   const [y, m] = rome.split("-").map(Number);
-  // 00:00 del giorno 1 a Roma (CEST +02 in estate; in inverno resta comunque nello stesso mese)
   return new Date(`${y}-${String(m).padStart(2, "0")}-01T00:00:00+02:00`);
 }
 
@@ -38,15 +38,11 @@ function monthKey(date: Date) {
     year: "numeric",
     month: "2-digit",
   }).format(date);
-  return rome.slice(0, 7); // YYYY-MM
+  return rome.slice(0, 7);
 }
 
-function buildMonthSeries(
-  expenses: { amount: number | null; createdAt: Date }[],
-  monthsBack = 6,
-) {
-  const now = new Date();
-  const romeNow = monthKey(now);
+function monthKeysBack(monthsBack = 6) {
+  const romeNow = monthKey(new Date());
   const [y0, m0] = romeNow.split("-").map(Number);
   const keys: string[] = [];
   for (let i = monthsBack - 1; i >= 0; i -= 1) {
@@ -58,32 +54,77 @@ function buildMonthSeries(
     }
     keys.push(`${y}-${String(m).padStart(2, "0")}`);
   }
+  return keys;
+}
 
-  const totals = new Map(keys.map((key) => [key, { total: 0, count: 0 }]));
-  for (const expense of expenses) {
-    const key = monthKey(expense.createdAt);
-    const bucket = totals.get(key);
-    if (!bucket) continue;
-    bucket.total += expense.amount || 0;
-    bucket.count += 1;
+function categoryLabel(category: string | null) {
+  if (!category) return "Senza categoria";
+  return CATEGORY_LABELS[category] || category;
+}
+
+/** Top N categorie (periodo) + serie mensile per ciascuna. Solo inviate/approvate. */
+function buildMonthCategorySeries(
+  expenses: {
+    amount: number | null;
+    category: string | null;
+    status: string;
+    createdAt: Date;
+  }[],
+  monthsBack = 6,
+  topN = 4,
+) {
+  const keys = monthKeysBack(monthsBack);
+  const eligible = expenses.filter(
+    (e) => e.status === "submitted" || e.status === "approved",
+  );
+
+  const periodTotals = new Map<string, number>();
+  for (const expense of eligible) {
+    const mk = monthKey(expense.createdAt);
+    if (!keys.includes(mk)) continue;
+    const label = categoryLabel(expense.category);
+    periodTotals.set(label, (periodTotals.get(label) || 0) + (expense.amount || 0));
   }
+
+  const categoryKeys = [...periodTotals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topN)
+    .map(([label]) => label);
 
   const formatter = new Intl.DateTimeFormat("it-IT", {
     month: "short",
     year: "2-digit",
     timeZone: "Europe/Rome",
   });
-  return keys.map((key) => {
+
+  const byMonthCategory = keys.map((key) => {
     const [y, m] = key.split("-").map(Number);
-    const label = formatter.format(new Date(Date.UTC(y, m - 1, 15)));
-    const bucket = totals.get(key)!;
-    return { label, total: bucket.total, count: bucket.count };
+    const row: Record<string, string | number> = {
+      label: formatter.format(new Date(Date.UTC(y, m - 1, 15))),
+    };
+    for (const cat of categoryKeys) row[cat] = 0;
+    return row;
   });
+
+  const indexByKey = new Map(keys.map((key, i) => [key, i]));
+
+  for (const expense of eligible) {
+    const mk = monthKey(expense.createdAt);
+    const idx = indexByKey.get(mk);
+    if (idx == null) continue;
+    const label = categoryLabel(expense.category);
+    if (!categoryKeys.includes(label)) continue;
+    const row = byMonthCategory[idx];
+    row[label] = Number(row[label] || 0) + (expense.amount || 0);
+  }
+
+  return { byMonthCategory, categoryKeys };
 }
 
 export default async function AdminDashboardPage() {
   const user = await getSessionUser();
   if (!user) return null;
+  if (!canAccessDashboard(user.role)) redirect("/admin/attivita");
 
   const actor = { id: user.id, role: user.role };
   const where = expenseDashboardWhere(actor);
@@ -117,17 +158,7 @@ export default async function AdminDashboardPage() {
     (e) => e.status === "submitted" || e.status === "approved",
   );
 
-  const byStatus = Object.keys(STATUS_LABELS).map((status) => {
-    const rows = allExpenses.filter((e) => e.status === status);
-    return {
-      status,
-      label: STATUS_LABELS[status],
-      count: rows.length,
-      total: sumAmounts(rows),
-    };
-  });
-
-  const byMonth = buildMonthSeries(allExpenses);
+  const { byMonthCategory, categoryKeys } = buildMonthCategorySeries(allExpenses);
   const monthApproved = sumAmounts(
     monthExpenses.filter((e) => e.status === "approved"),
   );
@@ -145,9 +176,7 @@ export default async function AdminDashboardPage() {
     year: "numeric",
   }).format(new Date());
 
-  const subtitle = isCoo(user.role)
-    ? `Solo note spese del CFO · ${monthLabel}`
-    : `Panoramica note spese · ${monthLabel}`;
+  const subtitle = `Panoramica note spese · ${monthLabel}`;
 
   return (
     <div className="space-y-8">
@@ -194,17 +223,14 @@ export default async function AdminDashboardPage() {
         <Kpi
           label="Totale mese"
           value={formatMoney(monthAll)}
-          hint={
-            isCoo(user.role)
-              ? "CFO · caricamento (escl. bozze/rifiutate)"
-              : "Data caricamento (escl. bozze e rifiutate)"
-          }
+          hint="Data caricamento (escl. bozze e rifiutate)"
         />
       </section>
 
-      {!isCoo(user.role) && (
-        <DashboardCharts byStatus={byStatus} byMonth={byMonth} />
-      )}
+      <DashboardCharts
+        byMonthCategory={byMonthCategory}
+        categoryKeys={categoryKeys}
+      />
     </div>
   );
 }

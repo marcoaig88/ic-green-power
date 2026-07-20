@@ -63,12 +63,19 @@ export function canAccessAdminArea(role: string) {
   return isManager(role);
 }
 
+/** Dashboard KPI: CFO e Admin IT (non COO). */
+export function canAccessDashboard(role: string) {
+  return isCfo(role) || isAdminIt(role);
+}
+
 export function canImportAci(role: string) {
   return isAdminIt(role);
 }
 
 export function homePathForRole(role: string) {
-  return canAccessAdminArea(role) ? "/admin" : "/expenses";
+  if (isCoo(role)) return "/admin/attivita";
+  if (canAccessDashboard(role)) return "/admin";
+  return "/expenses";
 }
 
 export function roleLabel(role: string) {

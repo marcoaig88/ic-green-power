@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  canAccessAdminArea,
+  canAccessDashboard,
   canApproveExpenses,
   canManageUsers,
   roleLabel,
@@ -36,7 +36,7 @@ export function AppShell({ user, pendingApprovalsCount = 0, children }: Props) {
   }
 
   const nav = [
-    ...(canAccessAdminArea(user.role)
+    ...(canAccessDashboard(user.role)
       ? [{ href: "/admin", label: "Dashboard" }]
       : []),
     ...(canApproveExpenses(user.role)

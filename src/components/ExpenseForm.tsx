@@ -710,7 +710,7 @@ export function ExpenseForm({
                 type="button"
                 disabled={saving}
                 onClick={openReject}
-                className="rounded-md border border-danger px-4 py-2 text-sm font-medium text-danger disabled:opacity-60"
+                className="rounded-md bg-[#c62828] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#b71c1c] disabled:opacity-60"
               >
                 Rifiuta
               </button>

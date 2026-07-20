@@ -5,6 +5,7 @@ import { PendingApprovals } from "@/components/PendingApprovals";
 import { fullName } from "@/lib/user";
 import {
   canApproveExpenses,
+  homePathForRole,
   isCfo,
   isCoo,
 } from "@/lib/roles";
@@ -22,7 +23,7 @@ function sumAmounts(rows: { amount: number | null }[]) {
 export default async function AttivitaPage() {
   const user = await getSessionUser();
   if (!user) return null;
-  if (!canApproveExpenses(user.role)) redirect("/admin");
+  if (!canApproveExpenses(user.role)) redirect(homePathForRole(user.role));
 
   const actor = { id: user.id, role: user.role };
   const pending = await loadPendingExpenses(actor);
