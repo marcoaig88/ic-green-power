@@ -99,7 +99,7 @@ function buildMonthCategorySeries(
 
   const byMonthCategory = keys.map((key) => {
     const [y, m] = key.split("-").map(Number);
-    const row: Record<string, string | number> = {
+    const row: { label: string; [categoryLabel: string]: string | number } = {
       label: formatter.format(new Date(Date.UTC(y, m - 1, 15))),
     };
     for (const cat of categoryKeys) row[cat] = 0;
