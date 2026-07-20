@@ -31,6 +31,7 @@ const updateSchema = z.object({
   routeFrom: z.string().nullable().optional(),
   routeTo: z.string().nullable().optional(),
   status: z.enum(["draft", "submitted", "approved", "rejected"]).optional(),
+  rejectionReason: z.string().nullable().optional(),
 });
 
 type Params = { params: Promise<{ id: string }> };
@@ -98,6 +99,22 @@ export async function PATCH(request: Request, { params }: Params) {
       }
     }
 
+    if (body.status === "rejected") {
+      const reason = (body.rejectionReason ?? "").trim();
+      if (!reason) {
+        return NextResponse.json(
+          { error: "Indica il motivo del rifiuto" },
+          { status: 400 },
+        );
+      }
+      if (reason.length > 1000) {
+        return NextResponse.json(
+          { error: "Motivo del rifiuto troppo lungo (max 1000 caratteri)" },
+          { status: 400 },
+        );
+      }
+    }
+
     // Dipendente: dopo l'invio non può più modificare i campi
     if (existing.status !== "draft" && !canApprove) {
       return NextResponse.json(
@@ -123,21 +140,31 @@ export async function PATCH(request: Request, { params }: Params) {
           : null
         : existing.expenseDate;
 
-    const duplicate = await findDuplicateExpense({
-      taxId: nextTaxId,
-      amount: nextAmount,
-      expenseDate: nextDate,
-      excludeId: id,
-    });
-    if (duplicate) {
-      return NextResponse.json(
-        {
-          error: duplicateExpenseMessage(duplicate),
-          duplicate,
-        },
-        { status: 409 },
-      );
+    // In approvazione/rifiuto non rieseguire il controllo duplicati sui campi
+    if (body.status !== "approved" && body.status !== "rejected") {
+      const duplicate = await findDuplicateExpense({
+        taxId: nextTaxId,
+        amount: nextAmount,
+        expenseDate: nextDate,
+        excludeId: id,
+      });
+      if (duplicate) {
+        return NextResponse.json(
+          {
+            error: duplicateExpenseMessage(duplicate),
+            duplicate,
+          },
+          { status: 409 },
+        );
+      }
     }
+
+    const rejectionReason =
+      body.status === "rejected"
+        ? (body.rejectionReason ?? "").trim()
+        : body.status === "approved" || body.status === "submitted"
+          ? null
+          : body.rejectionReason;
 
     const expense = await prisma.expense.update({
       where: { id },
@@ -166,6 +193,13 @@ export async function PATCH(request: Request, { params }: Params) {
         routeFrom: body.routeFrom,
         routeTo: body.routeTo,
         status: body.status,
+        rejectionReason:
+          body.status === "rejected" ||
+          body.status === "approved" ||
+          body.status === "submitted" ||
+          body.rejectionReason !== undefined
+            ? rejectionReason
+            : undefined,
       },
       include: {
         user: { select: { id: true, name: true, surname: true, email: true, role: true } },

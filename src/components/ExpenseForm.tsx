@@ -31,6 +31,7 @@ export type ExpenseFormValues = {
   routeFrom: string | null;
   routeTo: string | null;
   status: string;
+  rejectionReason: string | null;
   fileName: string | null;
   fileMimeType: string | null;
   filePath: string | null;
@@ -84,6 +85,8 @@ export function ExpenseForm({
   const [duplicate, setDuplicate] = useState<DuplicateInfo | null>(null);
   const [roundTrip, setRoundTrip] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(aiError || null);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   const [form, setForm] = useState({
     merchant: expense.merchant || "",
     amount: expense.amount?.toString() || "",
@@ -203,7 +206,11 @@ export function ExpenseForm({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function save(options?: { status?: string; advance?: boolean }) {
+  async function save(options?: {
+    status?: string;
+    advance?: boolean;
+    rejectionReason?: string;
+  }) {
     if (!canEdit && options?.status !== "approved" && options?.status !== "rejected") {
       return;
     }
@@ -230,6 +237,12 @@ export function ExpenseForm({
           routeFrom: mileage ? form.routeFrom || null : undefined,
           routeTo: mileage ? form.routeTo || null : undefined,
           status: options?.status,
+          rejectionReason:
+            options?.status === "rejected"
+              ? options.rejectionReason?.trim() || null
+              : options?.status === "approved"
+                ? null
+                : undefined,
         }),
       });
       const data = await res.json();
@@ -256,6 +269,7 @@ export function ExpenseForm({
       }
 
       if (options?.status === "approved" || options?.status === "rejected") {
+        setRejectOpen(false);
         goHome();
         return;
       }
@@ -266,6 +280,21 @@ export function ExpenseForm({
     } finally {
       setSaving(false);
     }
+  }
+
+  function openReject() {
+    setRejectReason("");
+    setError(null);
+    setRejectOpen(true);
+  }
+
+  function confirmReject() {
+    const reason = rejectReason.trim();
+    if (!reason) {
+      setError("Indica il motivo del rifiuto");
+      return;
+    }
+    void save({ status: "rejected", rejectionReason: reason });
   }
 
   async function cancel() {
@@ -331,6 +360,17 @@ export function ExpenseForm({
               </p>
             )}
           </>
+        )}
+
+        {expense.status === "rejected" && (
+          <div className="rounded-md border border-danger/30 bg-[#fde8e8] px-3 py-2 text-sm text-danger">
+            <p className="font-semibold">Nota rifiutata</p>
+            {expense.rejectionReason ? (
+              <p className="mt-1 whitespace-pre-wrap">{expense.rejectionReason}</p>
+            ) : (
+              <p className="mt-1 text-muted">Nessun motivo indicato.</p>
+            )}
+          </div>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -623,7 +663,7 @@ export function ExpenseForm({
               <button
                 type="button"
                 disabled={saving}
-                onClick={() => save({ status: "rejected" })}
+                onClick={openReject}
                 className="rounded-md border border-danger px-4 py-2 text-sm font-medium text-danger disabled:opacity-60"
               >
                 Rifiuta
@@ -631,6 +671,46 @@ export function ExpenseForm({
             </>
           )}
         </div>
+
+        {rejectOpen && (
+          <div className="rounded-xl border border-danger/30 bg-[#fde8e8]/40 p-4 space-y-3">
+            <div>
+              <p className="text-sm font-bold text-danger">Motivo del rifiuto</p>
+              <p className="mt-0.5 text-xs text-muted">
+                Obbligatorio: verrà mostrato a chi ha inserito la nota.
+              </p>
+            </div>
+            <textarea
+              rows={3}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Es. scontrino illeggibile, importo non congruente…"
+              className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none ring-brand focus:ring-2"
+              maxLength={1000}
+            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={saving}
+                onClick={confirmReject}
+                className="rounded-md bg-danger px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                Conferma rifiuto
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => {
+                  setRejectOpen(false);
+                  setRejectReason("");
+                }}
+                className="rounded-md border border-line bg-white px-4 py-2 text-sm font-medium text-muted"
+              >
+                Annulla
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       {!mileage && (

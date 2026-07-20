@@ -47,8 +47,9 @@ model Expense {
   aciVehicleRate   AciVehicleRate? @relation(fields: [aciVehicleRateId], references: [id], onDelete: SetNull)
   vehicleBrand     String?
   vehicleModel     String?
-  status         String    @default("draft") // draft | submitted | approved | rejected
-  aiRawJson      String?
+  status           String    @default("draft") // draft | submitted | approved | rejected
+  rejectionReason  String? // Motivo rifiuto (testo libero)
+  aiRawJson        String?
   aiConfidence   Float?
   fileName       String?
   fileMimeType   String?

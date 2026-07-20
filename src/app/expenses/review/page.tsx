@@ -88,6 +88,7 @@ export default async function ExpenseReviewPage({ searchParams }: Props) {
           routeFrom: expense.routeFrom,
           routeTo: expense.routeTo,
           status: expense.status,
+          rejectionReason: expense.rejectionReason,
           fileName: expense.fileName,
           fileMimeType: expense.fileMimeType,
           filePath: expense.filePath,
