@@ -65,6 +65,7 @@ export default async function ExpenseReviewPage({ searchParams }: Props) {
         key={expense.id}
         homeHref={homePathForRole(user.role)}
         viewerRole={user.role}
+        isOwner={expense.userId === user.id}
         canApprove={canApproveExpense(user, {
           userId: expense.userId,
           user: expense.user,

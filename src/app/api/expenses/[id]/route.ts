@@ -196,14 +196,16 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   const isOwner = existing.userId === user.id;
-  const isManagerViewer = canViewAllExpenses(user.role);
 
-  if (!isOwner && !isManagerViewer) {
-    return NextResponse.json({ error: "Operazione non consentita" }, { status: 403 });
+  // Solo il proprietario può annullare la propria nota spesa
+  if (!isOwner) {
+    return NextResponse.json(
+      { error: "Puoi annullare solo le tue note spese" },
+      { status: 403 },
+    );
   }
 
-  // Il dipendente può annullare bozze, inviate o rifiutate — non quelle già approvate
-  if (isOwner && !isManagerViewer && existing.status === "approved") {
+  if (existing.status === "approved") {
     return NextResponse.json(
       { error: "Non puoi annullare una nota spesa già approvata" },
       { status: 400 },

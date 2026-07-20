@@ -58,6 +58,7 @@ function toDateInput(value: string | null) {
 export function ExpenseForm({
   expense,
   canApprove = false,
+  isOwner = false,
   viewerRole,
   aiError,
   queue,
@@ -66,6 +67,8 @@ export function ExpenseForm({
   expense: ExpenseFormValues;
   /** True solo se questo utente può approvare QUESTA nota (CFO/COO). */
   canApprove?: boolean;
+  /** True se la nota appartiene all'utente loggato. */
+  isOwner?: boolean;
   /** Ruolo dell'utente loggato — i dipendenti non vedono mai Approva/Rifiuta. */
   viewerRole: string;
   aiError?: string | null;
@@ -106,11 +109,10 @@ export function ExpenseForm({
   const canEdit = isDraft || showApprovalActions;
   /** Dipendente (o utente senza poteri di approvazione) su nota già inserita. */
   const employeeLocked = !isDraft && !showApprovalActions;
+  /** Annulla solo sulle proprie note (non approvate). */
   const canCancelNote =
-    isDraft ||
-    expense.status === "submitted" ||
-    expense.status === "rejected" ||
-    (showApprovalActions && expense.status !== "approved");
+    isOwner &&
+    (isDraft || expense.status === "submitted" || expense.status === "rejected");
   const inputClass = canEdit
     ? "w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
     : "w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink";
@@ -283,7 +285,9 @@ export function ExpenseForm({
           </h1>
           <p className="brand-subtitle brand-subtitle--ink mt-1 text-sm">
             {employeeLocked
-              ? "Nota già inserita: puoi solo consultarla o annullarla."
+              ? isOwner
+                ? "Nota già inserita: puoi solo consultarla o annullarla."
+                : "Nota già inserita: consultazione in sola lettura."
               : mileage
                 ? "Nessun documento richiesto · importo = km × tariffa"
                 : "Controlla i campi estratti dall'AI e conferma prima di inviare."}
