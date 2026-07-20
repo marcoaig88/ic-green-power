@@ -87,7 +87,7 @@ export default async function AdminDashboardPage() {
 
   const monthExpenses = allExpenses.filter((expense) => {
     const date = expense.expenseDate || expense.createdAt;
-    return date >= monthStart && expense.status !== "draft";
+    return date >= monthStart;
   });
 
   const byStatus = Object.keys(STATUS_LABELS).map((status) => {
@@ -150,9 +150,7 @@ export default async function AdminDashboardPage() {
           label="Totale mese"
           value={formatMoney(monthAll)}
           hint={
-            isCoo(user.role)
-              ? "Spese del CFO nel mese (senza bozze)"
-              : "Spese del mese (senza bozze)"
+            isCoo(user.role) ? "Spese del CFO nel mese" : "Tutte le spese del mese"
           }
         />
         <Kpi
@@ -164,16 +162,24 @@ export default async function AdminDashboardPage() {
           <Link href="/admin/attivita" className="block transition hover:opacity-90">
             <Kpi
               label="Da approvare"
-              value={String(pendingCount)}
-              hint={`${formatMoney(pendingTotal)} · vai ad Attività`}
+              value={formatMoney(pendingTotal)}
+              hint={
+                pendingCount === 0
+                  ? "Nessuna nota · vai ad Attività"
+                  : `${pendingCount} ${pendingCount === 1 ? "nota" : "note"} · vai ad Attività`
+              }
               accent
             />
           </Link>
         ) : (
           <Kpi
             label="In attesa"
-            value={String(pendingCount)}
-            hint={formatMoney(pendingTotal)}
+            value={formatMoney(pendingTotal)}
+            hint={
+              pendingCount === 0
+                ? "Nessuna nota"
+                : `${pendingCount} ${pendingCount === 1 ? "nota" : "note"}`
+            }
             accent
           />
         )}
