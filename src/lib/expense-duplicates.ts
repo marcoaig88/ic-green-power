@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { STATUS_LABELS, formatDate } from "@/lib/format";
+import { STATUS_LABELS, formatDateTime } from "@/lib/format";
 
 export type DuplicateExpenseInfo = {
   id: string;
@@ -74,7 +74,7 @@ export async function findDuplicateExpense(params: {
     createdAt: match.createdAt.toISOString(),
     status: match.status,
     statusLabel: STATUS_LABELS[match.status] || match.status,
-    createdAtLabel: formatDate(match.createdAt),
+    createdAtLabel: formatDateTime(match.createdAt),
   };
 }
 

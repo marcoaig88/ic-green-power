@@ -17,6 +17,42 @@ export function formatDate(value: Date | string | null | undefined) {
   }).format(date);
 }
 
+/** Solo ora (caricamento nota). */
+export function formatTime(value: Date | string | null | undefined) {
+  if (!value) return "—";
+  const date = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("it-IT", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+/** Data + ora (es. caricamento). */
+export function formatDateTime(value: Date | string | null | undefined) {
+  if (!value) return "—";
+  const date = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+/** Data documento (o fallback) + ora di caricamento. */
+export function formatExpenseDateWithUploadTime(
+  expenseDate: Date | string | null | undefined,
+  createdAt: Date | string | null | undefined,
+) {
+  const day = formatDate(expenseDate || createdAt);
+  const time = formatTime(createdAt);
+  if (day === "—" || time === "—") return day;
+  return `${day}, ${time}`;
+}
+
 export const STATUS_LABELS: Record<string, string> = {
   draft: "Bozza",
   submitted: "Inviata",

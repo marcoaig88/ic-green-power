@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatExpenseDateWithUploadTime, formatMoney } from "@/lib/format";
 import { isMileageExpense } from "@/lib/mileage";
 import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -95,7 +95,10 @@ export function PendingApprovals({
                 </Link>
                 <p className="text-xs text-muted">
                   {expense.user.name} ·{" "}
-                  {formatDate(expense.expenseDate || expense.createdAt)}
+                  {formatExpenseDateWithUploadTime(
+                    expense.expenseDate,
+                    expense.createdAt,
+                  )}
                 </p>
                 {expense.highlight && (
                   <p className="mt-1 text-xs font-semibold text-amber-800">

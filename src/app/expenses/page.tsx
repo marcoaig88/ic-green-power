@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatDate, formatMoney, CATEGORY_LABELS } from "@/lib/format";
+import { formatExpenseDateWithUploadTime, formatMoney, CATEGORY_LABELS } from "@/lib/format";
 import {
   buildExpenseWhere,
   expenseFiltersToSearchParams,
@@ -157,7 +157,10 @@ export default async function ExpensesPage({ searchParams }: Props) {
                   >
                     <td className="px-4 py-3">
                       <Link href={`/expenses/${expense.id}`} className="hover:text-brand">
-                        {formatDate(expense.expenseDate || expense.createdAt)}
+                        {formatExpenseDateWithUploadTime(
+                          expense.expenseDate,
+                          expense.createdAt,
+                        )}
                       </Link>
                     </td>
                     <td className="px-4 py-3">
