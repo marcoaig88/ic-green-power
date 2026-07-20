@@ -120,7 +120,7 @@ export function PendingApprovals({
                   </button>
                 ) : (
                   <span className="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800">
-                    Solo COO
+                    {expense.highlight ? "Solo COO" : "Solo lettura"}
                   </span>
                 )}
               </div>

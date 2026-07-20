@@ -16,6 +16,7 @@ import { fullName } from "@/lib/user";
 import {
   ROLES,
   canApproveExpense,
+  isAdminIt,
   isCfo,
   isCoo,
   isCfoOwnPending,
@@ -159,9 +160,15 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   const pendingOwnCfo = isCfo(user.role)
     ? pending.filter((e) => isCfoOwnPending(actor, e))
     : [];
+  // Admin IT vede le pending ma senza poterle approvare
+  const pendingReadOnly = isAdminIt(user.role) ? pending : [];
 
-  const pendingCount = pendingApprovable.length;
-  const pendingTotal = sumAmounts(pendingApprovable);
+  const pendingCount = isAdminIt(user.role)
+    ? pending.length
+    : pendingApprovable.length;
+  const pendingTotal = isAdminIt(user.role)
+    ? sumAmounts(pending)
+    : sumAmounts(pendingApprovable);
   const filteredTotal = sumAmounts(allExpenses);
 
   const monthLabel = new Intl.DateTimeFormat("it-IT", {
@@ -239,12 +246,18 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="font-display text-lg font-bold text-brand-deep">
-              {isCoo(user.role) ? "Da approvare (CFO)" : "Da approvare"}
+              {isCoo(user.role)
+                ? "Da approvare (CFO)"
+                : isAdminIt(user.role)
+                  ? "In attesa di approvazione"
+                  : "Da approvare"}
             </h2>
             <p className="mt-0.5 text-xs text-muted">
               {pendingCount === 0
                 ? "Nessuna spesa in attesa"
-                : `${pendingCount} · ${formatMoney(pendingTotal)}`}
+                : isAdminIt(user.role)
+                  ? `${pendingCount} · ${formatMoney(pendingTotal)} · solo lettura`
+                  : `${pendingCount} · ${formatMoney(pendingTotal)}`}
             </p>
           </div>
           <Link
@@ -255,11 +268,13 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
           </Link>
         </div>
         <PendingApprovals
-          expenses={pendingApprovable.map((expense) => ({
-            ...expense,
-            user: { name: fullName(expense.user) },
-            canApprove: true,
-          }))}
+          expenses={(isAdminIt(user.role) ? pendingReadOnly : pendingApprovable).map(
+            (expense) => ({
+              ...expense,
+              user: { name: fullName(expense.user) },
+              canApprove: !isAdminIt(user.role),
+            }),
+          )}
           emptyMessage={
             isCoo(user.role)
               ? "Nessuna spesa del CFO in attesa."

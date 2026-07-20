@@ -7,6 +7,7 @@ import {
   canAccessExpense,
   canApproveExpense,
   canViewAllExpenses,
+  isAdminIt,
   isManager,
 } from "@/lib/roles";
 
@@ -83,9 +84,11 @@ export async function PATCH(request: Request, { params }: Params) {
       ) {
         return NextResponse.json(
           {
-            error: isManager(user.role)
-              ? "Non puoi approvare questa nota spesa"
-              : "Solo COO/CFO/Admin IT può approvare/rifiutare",
+            error: isAdminIt(user.role)
+              ? "Admin IT non può approvare le note spese"
+              : isManager(user.role)
+                ? "Non puoi approvare questa nota spesa"
+                : "Solo COO o CFO possono approvare/rifiutare",
           },
           { status: 403 },
         );

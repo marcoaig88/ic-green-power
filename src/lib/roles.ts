@@ -46,9 +46,9 @@ export function canManageUsers(role: string) {
   return isAdminIt(role);
 }
 
-/** Ha poteri di approvazione (ma non su tutte le spese). */
+/** Ha poteri di approvazione (COO/CFO). Admin IT non approva. */
 export function canApproveExpenses(role: string) {
-  return isManager(role);
+  return isCoo(role) || isCfo(role);
 }
 
 /** Vede spese oltre alle proprie (con scope diverso per COO/CFO). */
@@ -119,9 +119,9 @@ export function expenseDashboardWhere(session: SessionActor): Prisma.ExpenseWher
   return expenseListWhere(session);
 }
 
-/** Può approvare questa specifica nota spesa. */
+/** Può approvare questa specifica nota spesa. Admin IT: mai. */
 export function canApproveExpense(actor: SessionActor, expense: ExpenseOwner) {
-  if (isAdminIt(actor.role)) return true;
+  if (isAdminIt(actor.role)) return false;
   if (isCfo(actor.role)) {
     // CFO approva tutti tranne le proprie (le sue vanno al COO)
     return expense.userId !== actor.id;
