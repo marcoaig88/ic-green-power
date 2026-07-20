@@ -1,0 +1,112 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import bcrypt from "bcryptjs";
+import { getSessionUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+const createSchema = z.object({
+  name: z.string().trim().min(2),
+  email: z.string().trim().email(),
+  password: z.string().min(6).optional(),
+  aciVehicleRateId: z.string().min(1).nullable().optional(),
+});
+
+async function requireAdmin() {
+  const user = await getSessionUser();
+  if (!user) return { error: NextResponse.json({ error: "Non autenticato" }, { status: 401 }) };
+  if (user.role !== "admin") {
+    return { error: NextResponse.json({ error: "Solo admin" }, { status: 403 }) };
+  }
+  return { user };
+}
+
+export async function GET() {
+  const auth = await requireAdmin();
+  if (auth.error) return auth.error;
+
+  const users = await prisma.user.findMany({
+    where: { role: "employee" },
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      createdAt: true,
+      aciVehicleRateId: true,
+      aciVehicleRate: {
+        select: {
+          id: true,
+          year: true,
+          brand: true,
+          model: true,
+          fuelType: true,
+          ratePerKm: true,
+          production: true,
+        },
+      },
+    },
+  });
+
+  return NextResponse.json({ users });
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await requireAdmin();
+  if (auth.error) return auth.error;
+
+  try {
+    const body = createSchema.parse(await request.json());
+    const email = body.email.toLowerCase();
+
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return NextResponse.json({ error: "Email già registrata" }, { status: 409 });
+    }
+
+    if (body.aciVehicleRateId) {
+      const vehicle = await prisma.aciVehicleRate.findUnique({
+        where: { id: body.aciVehicleRateId },
+      });
+      if (!vehicle) {
+        return NextResponse.json({ error: "Veicolo ACI non trovato" }, { status: 400 });
+      }
+    }
+
+    const passwordHash = await bcrypt.hash(body.password || "password123", 10);
+    const user = await prisma.user.create({
+      data: {
+        name: body.name,
+        email,
+        passwordHash,
+        role: "employee",
+        aciVehicleRateId: body.aciVehicleRateId || null,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        aciVehicleRateId: true,
+        aciVehicleRate: {
+          select: {
+            id: true,
+            year: true,
+            brand: true,
+            model: true,
+            fuelType: true,
+            ratePerKm: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({ user }, { status: 201 });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Dati non validi", details: error.flatten() }, { status: 400 });
+    }
+    console.error(error);
+    return NextResponse.json({ error: "Creazione non riuscita" }, { status: 500 });
+  }
+}

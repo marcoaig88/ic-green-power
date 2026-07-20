@@ -1,0 +1,6 @@
+year;vehicleType;fuelType;production;brand;model;ratePerKm;fringe25;fringe30;fringe50;fringe60
+2026;autoveicolo;benzina;in_produzione;FIAT;Panda 1.0 FireFly 70cv;0,4120;;;
+2026;autoveicolo;gasolio;in_produzione;VOLKSWAGEN;Golf 2.0 TDI;0,4850;;;
+2026;autoveicolo;ibrido_benzina;in_produzione;TOYOTA;Yaris Hybrid;0,3980;;;
+2026;autoveicolo;elettrico;in_produzione;TESLA;Model 3 RWD;0,3560;;;
+2026;motoveicolo;benzina;in_produzione;HONDA;SH 350;0,2210;;;

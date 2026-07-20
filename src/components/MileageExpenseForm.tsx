@@ -2,10 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  DEFAULT_MILEAGE_RATE,
-  calcMileageAmount,
-} from "@/lib/mileage";
+import { calcMileageAmount } from "@/lib/mileage";
 import { formatMoney } from "@/lib/format";
 import { CalculateDistanceButton } from "@/components/CalculateDistanceButton";
 
@@ -13,7 +10,18 @@ function todayInput() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function MileageExpenseForm() {
+function formatRate(rate: number) {
+  return rate.toFixed(4).replace(".", ",");
+}
+
+export function MileageExpenseForm({
+  ratePerKm,
+  vehicleLabel,
+}: {
+  ratePerKm: number;
+  vehicleLabel: string | null;
+  aciVehicleRateId?: string | null;
+}) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,19 +31,17 @@ export function MileageExpenseForm() {
     routeFrom: "",
     routeTo: "",
     km: "",
-    ratePerKm: String(DEFAULT_MILEAGE_RATE),
     description: "",
   });
 
   const amount = useMemo(() => {
     const km = Number(form.km);
-    return calcMileageAmount(km, DEFAULT_MILEAGE_RATE);
-  }, [form.km]);
+    return calcMileageAmount(km, ratePerKm);
+  }, [form.km, ratePerKm]);
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => {
       const next = { ...prev, [key]: value };
-      // Se cambia la tratta, i km Google non sono più validi
       if (key === "routeFrom" || key === "routeTo") next.km = "";
       return next;
     });
@@ -46,7 +52,6 @@ export function MileageExpenseForm() {
     setError(null);
     try {
       const km = Number(form.km);
-      const ratePerKm = DEFAULT_MILEAGE_RATE;
       if (!form.routeFrom.trim() || !form.routeTo.trim()) {
         throw new Error("Indica partenza e destinazione");
       }
@@ -63,7 +68,6 @@ export function MileageExpenseForm() {
           routeFrom: form.routeFrom.trim(),
           routeTo: form.routeTo.trim(),
           km,
-          ratePerKm,
           description: form.description.trim() || null,
           submit: asSubmitted,
         }),
@@ -96,8 +100,18 @@ export function MileageExpenseForm() {
           Rimborso chilometrico
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Calcola i km con Google Maps oppure inseriscili a mano. Importo = km × tariffa.
+          Km da Google Maps · tariffa dal veicolo ACI assegnato (o default aziendale).
         </p>
+        {vehicleLabel ? (
+          <p className="mt-2 rounded-md bg-brand-soft/60 px-3 py-2 text-sm text-brand-deep">
+            Veicolo: {vehicleLabel}
+          </p>
+        ) : (
+          <p className="mt-2 rounded-md border border-warn/30 bg-[#fff8e8] px-3 py-2 text-sm text-warn">
+            Nessun veicolo ACI assegnato: viene usata la tariffa aziendale. Chiedi
+            all&apos;admin di associarti un&apos;auto.
+          </p>
+        )}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -136,7 +150,11 @@ export function MileageExpenseForm() {
           from={form.routeFrom}
           to={form.routeTo}
           roundTrip={roundTrip}
-          onRoundTripChange={setRoundTrip}
+          onRoundTripChange={(value) => {
+            setRoundTrip(value);
+            setForm((prev) => ({ ...prev, km: "" }));
+            setError(null);
+          }}
           onError={(message) => setError(message || null)}
           onResult={(result) => {
             setForm((prev) => ({
@@ -165,9 +183,9 @@ export function MileageExpenseForm() {
           <input
             type="text"
             readOnly
-            value="0,30"
+            value={formatRate(ratePerKm)}
             className="w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-sm text-ink"
-            aria-label="Tariffa chilometrica fissa 0,30 euro"
+            aria-label="Tariffa chilometrica"
           />
         </label>
         <label className="block sm:col-span-2">

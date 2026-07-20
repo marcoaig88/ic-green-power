@@ -54,6 +54,7 @@ export function ExpenseForm({
 }) {
   const router = useRouter();
   const mileage = isMileageExpense(expense);
+  const lockedRate = expense.ratePerKm ?? DEFAULT_MILEAGE_RATE;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [roundTrip, setRoundTrip] = useState(false);
@@ -69,7 +70,7 @@ export function ExpenseForm({
     documentNumber: expense.documentNumber || "",
     taxId: expense.taxId || "",
     km: expense.km?.toString() || "",
-    ratePerKm: String(DEFAULT_MILEAGE_RATE),
+    ratePerKm: String(lockedRate),
     routeFrom: expense.routeFrom || "",
     routeTo: expense.routeTo || "",
   });
@@ -103,9 +104,12 @@ export function ExpenseForm({
     setForm((prev) => {
       const next = { ...prev, ...patch };
       const km = Number(next.km);
-      next.ratePerKm = String(DEFAULT_MILEAGE_RATE);
-      const amount = calcMileageAmount(km, DEFAULT_MILEAGE_RATE);
-      if (amount != null) next.amount = amount.toFixed(2);
+      next.ratePerKm = String(lockedRate);
+      const amount =
+        next.km.trim() === "" || !Number.isFinite(km) || km <= 0
+          ? null
+          : calcMileageAmount(km, lockedRate);
+      next.amount = amount != null ? amount.toFixed(2) : "";
       next.merchant = mileageMerchant(next.routeFrom, next.routeTo);
       next.category = "chilometrico";
       return next;
@@ -140,7 +144,7 @@ export function ExpenseForm({
           documentNumber: mileage ? null : form.documentNumber || null,
           taxId: mileage ? null : form.taxId || null,
           km: mileage && form.km ? Number(form.km) : mileage ? null : undefined,
-          ratePerKm: mileage ? DEFAULT_MILEAGE_RATE : undefined,
+          ratePerKm: mileage ? lockedRate : undefined,
           routeFrom: mileage ? form.routeFrom || null : undefined,
           routeTo: mileage ? form.routeTo || null : undefined,
           status: options?.status,
@@ -276,7 +280,11 @@ export function ExpenseForm({
                 from={form.routeFrom}
                 to={form.routeTo}
                 roundTrip={roundTrip}
-                onRoundTripChange={setRoundTrip}
+                onRoundTripChange={(value) => {
+                  setRoundTrip(value);
+                  updateMileageFields({ km: "" });
+                  setError(null);
+                }}
                 onError={(message) => setError(message || null)}
                 onResult={(result) => {
                   updateMileageFields({
@@ -302,9 +310,9 @@ export function ExpenseForm({
                 <input
                   type="text"
                   readOnly
-                  value="0,30"
+                  value={lockedRate.toFixed(4).replace(".", ",")}
                   className="w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink"
-                  aria-label="Tariffa chilometrica fissa 0,30 euro"
+                  aria-label="Tariffa chilometrica"
                 />
               </label>
               <label className="block sm:col-span-2">

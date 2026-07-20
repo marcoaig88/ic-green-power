@@ -1,49 +1,32 @@
-"use client";
+import { getSessionUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { DEFAULT_MILEAGE_RATE } from "@/lib/mileage";
+import { NewExpenseClient } from "@/components/NewExpenseClient";
 
-import { useState } from "react";
-import { UploadExpense } from "@/components/UploadExpense";
-import { MileageExpenseForm } from "@/components/MileageExpenseForm";
+export default async function NewExpensePage() {
+  const session = await getSessionUser();
+  if (!session) return null;
 
-type Mode = "receipt" | "mileage";
+  const user = await prisma.user.findUnique({
+    where: { id: session.id },
+    select: {
+      aciVehicleRateId: true,
+      aciVehicleRate: {
+        select: { brand: true, model: true, ratePerKm: true, year: true },
+      },
+    },
+  });
 
-export default function NewExpensePage() {
-  const [mode, setMode] = useState<Mode>("receipt");
+  const ratePerKm = user?.aciVehicleRate?.ratePerKm ?? DEFAULT_MILEAGE_RATE;
+  const vehicleLabel = user?.aciVehicleRate
+    ? `${user.aciVehicleRate.brand} ${user.aciVehicleRate.model} (ACI ${user.aciVehicleRate.year})`
+    : null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="brand-title brand-title--ink text-3xl sm:text-4xl">Nuova spesa</h1>
-        <p className="brand-subtitle brand-subtitle--ink mt-1 text-sm">
-          Carica uno scontrino oppure registra un rimborso chilometrico senza documento.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setMode("receipt")}
-          className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
-            mode === "receipt"
-              ? "bg-brand text-white"
-              : "border border-line bg-white/80 text-ink hover:border-brand"
-          }`}
-        >
-          Scontrino / fattura
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("mileage")}
-          className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
-            mode === "mileage"
-              ? "bg-brand text-white"
-              : "border border-line bg-white/80 text-ink hover:border-brand"
-          }`}
-        >
-          Rimborso chilometrico
-        </button>
-      </div>
-
-      {mode === "receipt" ? <UploadExpense /> : <MileageExpenseForm />}
-    </div>
+    <NewExpenseClient
+      mileageRatePerKm={ratePerKm}
+      vehicleLabel={vehicleLabel}
+      aciVehicleRateId={user?.aciVehicleRateId || null}
+    />
   );
 }

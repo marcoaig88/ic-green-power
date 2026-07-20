@@ -19,10 +19,25 @@ export function AppShell({ user, children }: Props) {
   }
 
   const nav = [
-    ...(user.role === "admin" ? [{ href: "/admin", label: "Dashboard" }] : []),
+    ...(user.role === "admin"
+      ? [
+          { href: "/admin", label: "Dashboard" },
+          { href: "/admin/team", label: "Dipendenti" },
+        ]
+      : []),
     { href: "/expenses", label: "Note spese" },
     { href: "/expenses/new", label: "Nuova spesa" },
   ];
+
+  function isActive(href: string) {
+    if (pathname === href) return true;
+    if (href === "/expenses") {
+      return (
+        pathname.startsWith("/expenses/") && !pathname.startsWith("/expenses/new")
+      );
+    }
+    return false;
+  }
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-6 sm:px-6">
@@ -37,9 +52,7 @@ export function AppShell({ user, children }: Props) {
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <nav className="flex flex-wrap gap-3 font-semibold">
               {nav.map((item) => {
-                const active =
-                  pathname === item.href ||
-                  (item.href !== "/expenses" && pathname.startsWith(item.href + "/"));
+                const active = isActive(item.href);
                 return (
                   <Link
                     key={item.href}

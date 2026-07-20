@@ -76,7 +76,10 @@ export function CalculateDistanceButton({
           <input
             type="checkbox"
             checked={roundTrip}
-            onChange={(e) => onRoundTripChange(e.target.checked)}
+            onChange={(e) => {
+              setHint(null);
+              onRoundTripChange(e.target.checked);
+            }}
             className="rounded border-line"
           />
           Andata e ritorno

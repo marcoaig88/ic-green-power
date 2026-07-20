@@ -1,4 +1,4 @@
-/** Tariffa aziendale €/km (fissa, non editabile in UI). */
+/** Tariffa aziendale di fallback €/km se il dipendente non ha veicolo ACI. */
 export const DEFAULT_MILEAGE_RATE = 0.3;
 
 export function calcMileageAmount(km: number, ratePerKm: number) {

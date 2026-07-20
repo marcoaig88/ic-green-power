@@ -70,8 +70,18 @@ export async function POST(request: Request) {
 
 async function createMileageExpense(userId: string, raw: unknown) {
   const body = mileageSchema.parse(raw);
-  // Tariffa aziendale fissa (ignora eventuali override client)
-  const ratePerKm = DEFAULT_MILEAGE_RATE;
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      aciVehicleRateId: true,
+      aciVehicleRate: {
+        select: { id: true, brand: true, model: true, ratePerKm: true },
+      },
+    },
+  });
+
+  const ratePerKm = dbUser?.aciVehicleRate?.ratePerKm ?? DEFAULT_MILEAGE_RATE;
   const amount = calcMileageAmount(body.km, ratePerKm);
   if (amount == null || amount <= 0) {
     return NextResponse.json({ error: "Chilometri o tariffa non validi" }, { status: 400 });
@@ -90,6 +100,9 @@ async function createMileageExpense(userId: string, raw: unknown) {
       ratePerKm,
       routeFrom: body.routeFrom.trim(),
       routeTo: body.routeTo.trim(),
+      aciVehicleRateId: dbUser?.aciVehicleRateId || null,
+      vehicleBrand: dbUser?.aciVehicleRate?.brand || null,
+      vehicleModel: dbUser?.aciVehicleRate?.model || null,
       status: body.submit ? "submitted" : "draft",
     },
   });

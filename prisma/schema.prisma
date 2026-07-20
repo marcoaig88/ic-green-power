@@ -8,13 +8,18 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  name         String
-  email        String    @unique
-  passwordHash String
-  role         String    @default("employee") // employee | admin
-  createdAt    DateTime  @default(now())
-  expenses     Expense[]
+  id               String          @id @default(cuid())
+  name             String
+  email            String          @unique
+  passwordHash     String
+  role             String          @default("employee") // employee | admin
+  /// Veicolo personale per rimborso chilometrico (riga tabella ACI)
+  aciVehicleRateId String?
+  aciVehicleRate   AciVehicleRate? @relation(fields: [aciVehicleRateId], references: [id], onDelete: SetNull)
+  createdAt        DateTime        @default(now())
+  expenses         Expense[]
+
+  @@index([aciVehicleRateId])
 }
 
 model Expense {
@@ -36,6 +41,11 @@ model Expense {
   ratePerKm      Float?
   routeFrom      String?
   routeTo        String?
+  // Riferimento riga tabella ACI (opzionale)
+  aciVehicleRateId String?
+  aciVehicleRate   AciVehicleRate? @relation(fields: [aciVehicleRateId], references: [id], onDelete: SetNull)
+  vehicleBrand     String?
+  vehicleModel     String?
   status         String    @default("draft") // draft | submitted | approved | rejected
   aiRawJson      String?
   aiConfidence   Float?
@@ -47,4 +57,50 @@ model Expense {
 
   @@index([userId])
   @@index([status])
+  @@index([aciVehicleRateId])
+}
+
+/// Annualità / batch di import tabelle ACI (Gazzetta Ufficiale).
+model AciRateTable {
+  id         String           @id @default(cuid())
+  year       Int
+  label      String? // es. "Tabelle ACI 2026"
+  sourceFile String?
+  importedAt DateTime         @default(now())
+  rows       AciVehicleRate[]
+
+  @@unique([year, sourceFile])
+  @@index([year])
+}
+
+/// Riga costo chilometrico ACI (marca/modello → €/km).
+model AciVehicleRate {
+  id          String       @id @default(cuid())
+  tableId     String
+  table       AciRateTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  year        Int
+  /// autoveicolo | motoveicolo | autocaravan
+  vehicleType String
+  /// benzina | gasolio | gpl | metano | ibrido_benzina | ibrido_gasolio | plug_in | elettrico | altro
+  fuelType    String
+  /// in_produzione | fuori_produzione
+  production  String
+  brand       String
+  model       String
+  /// Costo chilometrico di esercizio (€/km) — colonna usata per i rimborsi
+  ratePerKm   Float
+  /// Fringe benefit annui opzionali (calcolo su 15.000 km, % TUIR)
+  fringe25    Float?
+  fringe30    Float?
+  fringe50    Float?
+  fringe60    Float?
+  rawLabel    String? // riga originale se diversa da brand+model
+  createdAt   DateTime     @default(now())
+  expenses    Expense[]
+  users       User[]
+
+  @@index([year])
+  @@index([year, brand])
+  @@index([year, fuelType, production])
+  @@index([brand, model])
 }
