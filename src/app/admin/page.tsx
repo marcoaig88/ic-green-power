@@ -290,7 +290,9 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         </section>
       )}
 
-      <DashboardCharts byStatus={byStatus} byMonth={byMonth} />
+      {!isCoo(user.role) && (
+        <DashboardCharts byStatus={byStatus} byMonth={byMonth} />
+      )}
     </div>
   );
 }
