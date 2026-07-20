@@ -87,14 +87,18 @@ export function PendingApprovals({
               }`}
             >
               <div className="min-w-0">
+                <p className="mb-1">
+                  <span className="inline-flex max-w-full items-center rounded-lg border border-brand/30 bg-brand-soft px-2.5 py-1 text-sm font-extrabold text-brand-deep">
+                    <span className="truncate">{expense.user.name}</span>
+                  </span>
+                </p>
                 <Link
                   href={`/expenses/${expense.id}`}
                   className="font-semibold text-ink hover:text-brand"
                 >
                   {expense.merchant || "Senza fornitore"}
                 </Link>
-                <p className="text-xs text-muted">
-                  {expense.user.name} ·{" "}
+                <p className="mt-0.5 text-xs text-muted">
                   {formatExpenseDateWithUploadTime(
                     expense.expenseDate,
                     expense.createdAt,
