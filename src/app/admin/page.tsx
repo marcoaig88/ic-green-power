@@ -87,7 +87,7 @@ export default async function AdminDashboardPage() {
 
   const monthExpenses = allExpenses.filter((expense) => {
     const date = expense.expenseDate || expense.createdAt;
-    return date >= monthStart;
+    return date >= monthStart && expense.status !== "draft";
   });
 
   const byStatus = Object.keys(STATUS_LABELS).map((status) => {
@@ -150,7 +150,9 @@ export default async function AdminDashboardPage() {
           label="Totale mese"
           value={formatMoney(monthAll)}
           hint={
-            isCoo(user.role) ? "Spese del CFO nel mese" : "Tutte le spese del mese"
+            isCoo(user.role)
+              ? "Spese del CFO nel mese (senza bozze)"
+              : "Spese del mese (senza bozze)"
           }
         />
         <Kpi

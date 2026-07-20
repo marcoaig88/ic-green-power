@@ -353,10 +353,7 @@ export function ExpenseForm({
 
         {!mileage && (
           <>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted">Confidenza AI</span>
-              <AiConfidenceBadge value={expense.aiConfidence} />
-            </div>
+            <AiConfidenceBadge value={expense.aiConfidence} size="lg" />
             {extractionError && (
               <p className="rounded-md border border-warn/40 bg-[#fff8e8] px-3 py-2 text-sm text-warn">
                 Estrazione AI non riuscita: {extractionError}. Compila i campi a mano.

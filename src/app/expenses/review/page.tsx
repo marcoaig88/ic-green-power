@@ -50,9 +50,6 @@ export default async function ExpenseReviewPage({ searchParams }: Props) {
         <p className="font-semibold text-brand-deep">
           Conferma scontrini · {index + 1} di {ids.length}
         </p>
-        <p className="mt-1 text-muted">
-          Controlla e conferma ogni spesa. Alla fine tornerai alla dashboard.
-        </p>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-bg-accent">
           <div
             className="h-full rounded-full bg-brand transition-all"
