@@ -13,6 +13,7 @@ import { ExpenseFilters } from "@/components/ExpenseFilters";
 import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
 import { QuickApproveButton } from "@/components/QuickApproveButton";
 import {
+  CFO_ROLE_VALUES,
   ROLES,
   canApproveExpense,
   canApproveExpenses,
@@ -41,8 +42,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
   });
   const manager = canViewAllExpenses(user.role);
   const showApproveCol = canApproveExpenses(user.role);
+  const coo = isCoo(user.role);
 
-  const teamWhere = isCoo(user.role) ? { role: ROLES.cfo } : teamUsersWhere;
+  const teamWhere = coo
+    ? { role: { in: [...CFO_ROLE_VALUES] } }
+    : teamUsersWhere;
 
   const [expenses, teamRows] = await Promise.all([
     prisma.expense.findMany({
@@ -71,8 +75,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
         <div>
           <h1 className="brand-title brand-title--ink text-3xl sm:text-4xl">Note spese</h1>
           <p className="brand-subtitle brand-subtitle--ink mt-1 text-sm">
-            {isCoo(user.role)
-              ? "Spese del CFO e le tue"
+            {coo
+              ? "Le tue spese e quelle del CFO · puoi approvare solo le spese del CFO"
               : manager
                 ? "Tutte le spese del team"
                 : "Le tue spese caricate e in lavorazione"}
@@ -140,6 +144,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
             </thead>
             <tbody>
               {expenses.map((expense) => {
+                const isOwn = expense.userId === user.id;
                 const ownPending = isCfoOwnPending(actor, expense);
                 const rowApprove =
                   expense.status === "submitted" &&
@@ -152,7 +157,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
                   <tr
                     key={expense.id}
                     className={`border-b border-line/70 last:border-0 ${
-                      ownPending ? "bg-amber-50/80" : ""
+                      ownPending
+                        ? "bg-amber-50/80"
+                        : coo && isOwn
+                          ? "bg-brand-soft/25"
+                          : ""
                     }`}
                   >
                     <td className="px-4 py-3">
@@ -173,6 +182,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
                       {ownPending && (
                         <p className="mt-0.5 text-xs font-semibold text-amber-800">
                           In attesa del COO
+                        </p>
+                      )}
+                      {coo && isOwn && (
+                        <p className="mt-0.5 text-xs font-semibold text-brand-deep">
+                          Tua spesa
                         </p>
                       )}
                     </td>
@@ -203,6 +217,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
                           <QuickApproveButton expenseId={expense.id} />
                         ) : ownPending ? (
                           <span className="text-xs font-semibold text-amber-800">Solo COO</span>
+                        ) : coo && isOwn ? (
+                          <span className="text-xs font-semibold text-muted">Non approvabile</span>
                         ) : (
                           <span className="text-xs text-muted">—</span>
                         )}

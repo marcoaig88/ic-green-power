@@ -33,6 +33,9 @@ export function isCfo(role: string) {
   return role === ROLES.cfo || role === ROLES.responsabile;
 }
 
+/** Ruoli CFO in query Prisma (include legacy). */
+export const CFO_ROLE_VALUES = [ROLES.cfo, ROLES.responsabile] as const;
+
 export function isCoo(role: string) {
   return role === ROLES.coo;
 }
@@ -125,7 +128,10 @@ export function expenseListWhere(session: SessionActor): Prisma.ExpenseWhereInpu
     return {
       AND: [
         {
-          OR: [{ user: { role: ROLES.cfo } }, { userId: session.id }],
+          OR: [
+            { user: { role: { in: [...CFO_ROLE_VALUES] } } },
+            { userId: session.id },
+          ],
         },
         {
           OR: [{ status: { not: "draft" } }, { userId: session.id }],
@@ -144,7 +150,10 @@ export function expenseListWhere(session: SessionActor): Prisma.ExpenseWhereInpu
 export function expenseDashboardWhere(session: SessionActor): Prisma.ExpenseWhereInput {
   if (isCoo(session.role)) {
     return {
-      AND: [{ user: { role: ROLES.cfo } }, { status: { not: "draft" } }],
+      AND: [
+        { user: { role: { in: [...CFO_ROLE_VALUES] } } },
+        { status: { not: "draft" } },
+      ],
     };
   }
   return expenseListWhere(session);
@@ -153,12 +162,15 @@ export function expenseDashboardWhere(session: SessionActor): Prisma.ExpenseWher
 /** Può approvare questa specifica nota spesa. Admin IT: mai. */
 export function canApproveExpense(actor: SessionActor, expense: ExpenseOwner) {
   if (isAdminIt(actor.role)) return false;
+  // Mai le proprie
+  if (expense.userId === actor.id) return false;
   if (isCfo(actor.role)) {
-    // CFO approva tutti tranne le proprie (le sue vanno al COO)
-    return expense.userId !== actor.id;
+    // CFO approva tutti tranne le proprie (già escluso sopra; le sue vanno al COO)
+    return true;
   }
   if (isCoo(actor.role)) {
-    return expense.user?.role === ROLES.cfo;
+    // COO approva solo le spese del CFO
+    return isCfo(expense.user?.role || "");
   }
   return false;
 }
@@ -175,6 +187,6 @@ export function isCfoOwnPending(
 export function canAccessExpense(actor: SessionActor, expense: ExpenseOwner) {
   if (expense.userId === actor.id) return true;
   if (isAdminIt(actor.role) || isCfo(actor.role)) return true;
-  if (isCoo(actor.role)) return expense.user?.role === ROLES.cfo;
+  if (isCoo(actor.role)) return isCfo(expense.user?.role || "");
   return false;
 }
