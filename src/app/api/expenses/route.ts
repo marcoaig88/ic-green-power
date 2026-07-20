@@ -156,7 +156,7 @@ async function createReceiptExpense(userId: string, form: FormData) {
       merchant: extraction?.merchant ?? null,
       amount: extraction?.amount ?? null,
       currency: extraction?.currency ?? "EUR",
-      expenseDate: extraction?.expenseDate ? new Date(extraction.expenseDate) : null,
+      expenseDate: parseExpenseDate(extraction?.expenseDate),
       vatAmount: extraction?.vatAmount ?? null,
       vatRate: extraction?.vatRate ?? null,
       category: extraction?.category ?? null,
@@ -173,4 +173,15 @@ async function createReceiptExpense(userId: string, form: FormData) {
   });
 
   return NextResponse.json({ expense, aiError });
+}
+
+function parseExpenseDate(value: string | null | undefined) {
+  if (!value) return null;
+  const iso = value.trim().slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const date = new Date(`${iso}T12:00:00.000Z`);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }

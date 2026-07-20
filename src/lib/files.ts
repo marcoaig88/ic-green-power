@@ -17,7 +17,8 @@ const ALLOWED_TYPES = new Set([
 ]);
 
 export function assertAllowedMime(mimeType: string) {
-  if (!ALLOWED_TYPES.has(mimeType)) {
+  const normalized = mimeType === "image/jpg" ? "image/jpeg" : mimeType;
+  if (!ALLOWED_TYPES.has(normalized)) {
     throw new Error("Formato non supportato. Usa JPG, PNG, WEBP o PDF.");
   }
 }
@@ -29,10 +30,23 @@ function extensionFor(mimeType: string) {
   return "jpg";
 }
 
-export async function saveUpload(file: File) {
-  assertAllowedMime(file.type);
+function resolveUploadMime(file: File) {
+  if (file.type && file.type !== "application/octet-stream") {
+    return file.type === "image/jpg" ? "image/jpeg" : file.type;
+  }
+  const ext = file.name.split(".").pop()?.toLowerCase() || "";
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  if (ext === "pdf") return "application/pdf";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  return file.type || "";
+}
 
-  const ext = extensionFor(file.type);
+export async function saveUpload(file: File) {
+  const mimeType = resolveUploadMime(file);
+  assertAllowedMime(mimeType);
+
+  const ext = extensionFor(mimeType);
   const storedName = `${Date.now()}-${randomUUID()}.${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -43,7 +57,7 @@ export async function saveUpload(file: File) {
     const { error } = await supabase.storage
       .from(RECEIPTS_BUCKET)
       .upload(storagePath, buffer, {
-        contentType: file.type,
+        contentType: mimeType,
         upsert: false,
       });
 
@@ -55,7 +69,7 @@ export async function saveUpload(file: File) {
       buffer,
       storedName,
       relativePath: storagePath,
-      mimeType: file.type,
+      mimeType,
       originalName: file.name,
       storage: "supabase" as const,
     };
@@ -70,7 +84,7 @@ export async function saveUpload(file: File) {
     buffer,
     storedName,
     relativePath: path.join("uploads", storedName).replace(/\\/g, "/"),
-    mimeType: file.type,
+    mimeType,
     originalName: file.name,
     storage: "local" as const,
   };

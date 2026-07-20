@@ -2,16 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-
-const ACCEPTED = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "application/pdf",
-]);
+import {
+  MAX_UPLOAD_BYTES,
+  isAllowedReceiptMime,
+  prepareReceiptFile,
+  readApiError,
+  resolveFileMime,
+} from "@/lib/receipt-upload";
 
 const MAX_FILES = 15;
-const MAX_SIZE = 10 * 1024 * 1024;
 
 export function UploadExpense() {
   const router = useRouter();
@@ -35,18 +34,28 @@ export function UploadExpense() {
         problems.push(`Massimo ${MAX_FILES} file per volta.`);
         break;
       }
-      if (!ACCEPTED.has(file.type)) {
-        problems.push(`${file.name}: formato non supportato`);
-        continue;
-      }
-      if (file.size > MAX_SIZE) {
-        problems.push(`${file.name}: troppo grande (max 10MB)`);
+      const mime = resolveFileMime(file);
+      if (!isAllowedReceiptMime(mime)) {
+        if (mime === "image/heic" || mime === "image/heif" || /\.heic$/i.test(file.name)) {
+          problems.push(
+            `${file.name}: HEIC non supportato. Esporta in JPG oppure attiva «Formato più compatibile» su iPhone.`,
+          );
+        } else {
+          problems.push(`${file.name}: formato non supportato (JPG, PNG, WEBP, PDF)`);
+        }
         continue;
       }
       const duplicate = next.some(
-        (f) => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified,
+        (f) =>
+          f.name === file.name && f.size === file.size && f.lastModified === file.lastModified,
       );
-      if (!duplicate) next.push(file);
+      if (!duplicate) {
+        next.push(
+          file.type === mime
+            ? file
+            : new File([file], file.name, { type: mime, lastModified: file.lastModified }),
+        );
+      }
     }
 
     setFiles(next);
@@ -74,12 +83,35 @@ export function UploadExpense() {
     try {
       for (let i = 0; i < files.length; i++) {
         setProgress({ current: i + 1, total: files.length });
+        let prepared: File;
+        try {
+          prepared = await prepareReceiptFile(files[i]);
+        } catch (prepErr) {
+          failures.push(
+            prepErr instanceof Error ? prepErr.message : `${files[i].name}: preparazione fallita`,
+          );
+          continue;
+        }
+
         const body = new FormData();
-        body.append("file", files[i]);
+        body.append("file", prepared);
         const res = await fetch("/api/expenses", { method: "POST", body });
-        const data = await res.json();
+
         if (!res.ok) {
-          failures.push(`${files[i].name}: ${data.error || "errore"}`);
+          failures.push(`${files[i].name}: ${await readApiError(res)}`);
+          continue;
+        }
+
+        let data: { expense?: { id: string } };
+        try {
+          data = (await res.json()) as { expense?: { id: string } };
+        } catch {
+          failures.push(`${files[i].name}: risposta server non valida`);
+          continue;
+        }
+
+        if (!data.expense?.id) {
+          failures.push(`${files[i].name}: risposta incompleta`);
           continue;
         }
         ids.push(data.expense.id);
@@ -98,10 +130,13 @@ export function UploadExpense() {
     }
   }
 
+  const maxMb = Math.floor(MAX_UPLOAD_BYTES / 1024 / 1024);
+
   return (
-    <form onSubmit={onSubmit} className="mx-auto max-w-xl space-y-6">
+    <form onSubmit={onSubmit} className="mx-auto max-w-xl space-y-6" noValidate>
       <p className="text-sm text-muted">
         Puoi caricare più scontrini insieme: Gemini estrae i dati e poi li confermi uno per uno.
+        Le foto grandi vengono compresse automaticamente.
       </p>
 
       <div
@@ -149,13 +184,13 @@ export function UploadExpense() {
               : "Trascina o seleziona più foto / PDF"}
         </span>
         <span className="text-sm text-muted">
-          JPG, PNG, WEBP o PDF · max 10MB · fino a {MAX_FILES} file
+          JPG, PNG, WEBP o PDF · max ~{maxMb}MB · fino a {MAX_FILES} file
         </span>
         <input
           ref={inputRef}
           type="file"
           multiple
-          accept="image/jpeg,image/png,image/webp,application/pdf"
+          accept="image/jpeg,image/png,image/webp,image/*,application/pdf,.jpg,.jpeg,.png,.webp,.pdf"
           className="sr-only"
           onChange={(e) => {
             addFiles(e.target.files);
