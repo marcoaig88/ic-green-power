@@ -94,6 +94,19 @@ export function ExpenseForm({
 
   const inQueue = Boolean(queue && queue.ids.length > 0);
   const isLastInQueue = inQueue && queue!.index >= queue!.ids.length - 1;
+  const isDraft = expense.status === "draft";
+  /** Bozza editabile; dopo l'invio solo chi può approvare può intervenire. */
+  const canEdit = isDraft || (isAdmin && expense.status === "submitted");
+  /** Dipendente che consulta una nota già inserita (sola lettura). */
+  const employeeLocked = !isDraft && !isAdmin;
+  const canCancelNote =
+    isDraft ||
+    expense.status === "submitted" ||
+    expense.status === "rejected" ||
+    (isAdmin && expense.status !== "approved");
+  const inputClass = canEdit
+    ? "w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+    : "w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink";
 
   function goHome() {
     router.push(homeHref);
@@ -139,6 +152,7 @@ export function ExpenseForm({
   }
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+    if (!canEdit) return;
     if (mileage && (key === "routeFrom" || key === "routeTo")) {
       updateMileageFields({ [key]: value, km: "" } as Partial<typeof form>);
       return;
@@ -148,6 +162,9 @@ export function ExpenseForm({
   }
 
   async function save(options?: { status?: string; advance?: boolean }) {
+    if (!canEdit && options?.status !== "approved" && options?.status !== "rejected") {
+      return;
+    }
     setSaving(true);
     setError(null);
     setDuplicate(null);
@@ -210,16 +227,15 @@ export function ExpenseForm({
   }
 
   async function cancel() {
-    if (expense.status !== "draft") {
-      if (inQueue) goNextInQueue();
-      else router.push("/expenses");
+    if (!canCancelNote) {
+      goHome();
       return;
     }
 
     const ok = window.confirm(
       expense.filePath
-        ? "Annullare questa spesa? L'allegato verrà eliminato."
-        : "Annullare questa spesa?",
+        ? "Annullare questa nota spesa? L'allegato verrà eliminato."
+        : "Annullare questa nota spesa?",
     );
     if (!ok) return;
 
@@ -231,8 +247,7 @@ export function ExpenseForm({
       if (!res.ok) throw new Error(data.error || "Annullamento non riuscito");
       if (inQueue) goNextInQueue(expense.id);
       else {
-        router.push("/expenses");
-        router.refresh();
+        goHome();
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Errore");
@@ -252,9 +267,11 @@ export function ExpenseForm({
             {mileage ? "Rimborso chilometrico" : "Dettaglio spesa"}
           </h1>
           <p className="brand-subtitle brand-subtitle--ink mt-1 text-sm">
-            {mileage
-              ? "Nessun documento richiesto · importo = km × tariffa"
-              : "Controlla i campi estratti dall'AI e conferma prima di inviare."}
+            {employeeLocked
+              ? "Nota già inserita: puoi solo consultarla o annullarla."
+              : mileage
+                ? "Nessun documento richiesto · importo = km × tariffa"
+                : "Controlla i campi estratti dall'AI e conferma prima di inviare."}
           </p>
         </div>
 
@@ -279,7 +296,8 @@ export function ExpenseForm({
                 <span className="mb-1 block text-sm text-muted">Data viaggio</span>
                 <input
                   type="date"
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  readOnly={!canEdit}
+                  className={inputClass}
                   value={form.expenseDate}
                   onChange={(e) => update("expenseDate", e.target.value)}
                 />
@@ -300,7 +318,8 @@ export function ExpenseForm({
               <label className="block">
                 <span className="mb-1 block text-sm text-muted">Da</span>
                 <input
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  readOnly={!canEdit}
+                  className={inputClass}
                   value={form.routeFrom}
                   onChange={(e) => update("routeFrom", e.target.value)}
                 />
@@ -308,30 +327,33 @@ export function ExpenseForm({
               <label className="block">
                 <span className="mb-1 block text-sm text-muted">A</span>
                 <input
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  readOnly={!canEdit}
+                  className={inputClass}
                   value={form.routeTo}
                   onChange={(e) => update("routeTo", e.target.value)}
                 />
               </label>
-              <CalculateDistanceButton
-                from={form.routeFrom}
-                to={form.routeTo}
-                roundTrip={roundTrip}
-                onRoundTripChange={(value) => {
-                  setRoundTrip(value);
-                  updateMileageFields({ km: "" });
-                  setError(null);
-                }}
-                onError={(message) => setError(message || null)}
-                onResult={(result) => {
-                  updateMileageFields({
-                    km: String(result.km),
-                    routeFrom: result.origin || form.routeFrom,
-                    routeTo: result.destination || form.routeTo,
-                  });
-                  setError(null);
-                }}
-              />
+              {canEdit && (
+                <CalculateDistanceButton
+                  from={form.routeFrom}
+                  to={form.routeTo}
+                  roundTrip={roundTrip}
+                  onRoundTripChange={(value) => {
+                    setRoundTrip(value);
+                    updateMileageFields({ km: "" });
+                    setError(null);
+                  }}
+                  onError={(message) => setError(message || null)}
+                  onResult={(result) => {
+                    updateMileageFields({
+                      km: String(result.km),
+                      routeFrom: result.origin || form.routeFrom,
+                      routeTo: result.destination || form.routeTo,
+                    });
+                    setError(null);
+                  }}
+                />
+              )}
               <label className="block">
                 <span className="mb-1 block text-sm text-muted">Km (Google Maps)</span>
                 <input
@@ -356,7 +378,8 @@ export function ExpenseForm({
                 <span className="mb-1 block text-sm text-muted">Motivo / note</span>
                 <textarea
                   rows={3}
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  readOnly={!canEdit}
+                  className={inputClass}
                   value={form.description}
                   onChange={(e) => update("description", e.target.value)}
                 />
@@ -367,7 +390,8 @@ export function ExpenseForm({
               <label className="block sm:col-span-2">
                 <span className="mb-1 block text-sm text-muted">Fornitore</span>
                 <input
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  readOnly={!canEdit}
+                  className={inputClass}
                   value={form.merchant}
                   onChange={(e) => update("merchant", e.target.value)}
                 />
@@ -377,7 +401,8 @@ export function ExpenseForm({
                 <input
                   type="number"
                   step="0.01"
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  readOnly={!canEdit}
+                  className={inputClass}
                   value={form.amount}
                   onChange={(e) => update("amount", e.target.value)}
                 />
@@ -385,7 +410,8 @@ export function ExpenseForm({
               <label className="block">
                 <span className="mb-1 block text-sm text-muted">Valuta</span>
                 <input
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  readOnly={!canEdit}
+                  className={inputClass}
                   value={form.currency}
                   onChange={(e) => update("currency", e.target.value)}
                 />
@@ -394,7 +420,8 @@ export function ExpenseForm({
                 <span className="mb-1 block text-sm text-muted">Data</span>
                 <input
                   type="date"
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  readOnly={!canEdit}
+                  className={inputClass}
                   value={form.expenseDate}
                   onChange={(e) => update("expenseDate", e.target.value)}
                 />
@@ -402,7 +429,8 @@ export function ExpenseForm({
               <label className="block">
                 <span className="mb-1 block text-sm text-muted">Categoria</span>
                 <select
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  disabled={!canEdit}
+                  className={inputClass}
                   value={form.category}
                   onChange={(e) => update("category", e.target.value)}
                 >
@@ -418,7 +446,8 @@ export function ExpenseForm({
                 <input
                   type="number"
                   step="0.01"
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  readOnly={!canEdit}
+                  className={inputClass}
                   value={form.vatAmount}
                   onChange={(e) => update("vatAmount", e.target.value)}
                 />
@@ -428,7 +457,8 @@ export function ExpenseForm({
                 <input
                   type="number"
                   step="0.01"
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  readOnly={!canEdit}
+                  className={inputClass}
                   value={form.vatRate}
                   onChange={(e) => update("vatRate", e.target.value)}
                 />
@@ -436,7 +466,8 @@ export function ExpenseForm({
               <label className="block">
                 <span className="mb-1 block text-sm text-muted">N. documento</span>
                 <input
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  readOnly={!canEdit}
+                  className={inputClass}
                   value={form.documentNumber}
                   onChange={(e) => update("documentNumber", e.target.value)}
                 />
@@ -444,7 +475,8 @@ export function ExpenseForm({
               <label className="block">
                 <span className="mb-1 block text-sm text-muted">P.IVA / Codice fiscale</span>
                 <input
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  readOnly={!canEdit}
+                  className={inputClass}
                   value={form.taxId}
                   onChange={(e) => update("taxId", e.target.value)}
                   placeholder="IT12345678901"
@@ -454,7 +486,8 @@ export function ExpenseForm({
                 <span className="mb-1 block text-sm text-muted">Descrizione</span>
                 <textarea
                   rows={3}
-                  className="w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
+                  readOnly={!canEdit}
+                  className={inputClass}
                   value={form.description}
                   onChange={(e) => update("description", e.target.value)}
                 />
@@ -481,7 +514,7 @@ export function ExpenseForm({
         )}
 
         <div className="flex flex-wrap gap-3 pt-2">
-          {!(inQueue && !isLastInQueue && expense.status === "draft") && (
+          {isDraft && !(inQueue && !isLastInQueue) && (
             <button
               type="button"
               disabled={saving}
@@ -491,7 +524,7 @@ export function ExpenseForm({
               Salva bozza
             </button>
           )}
-          {expense.status === "draft" && (
+          {isDraft && (
             <button
               type="button"
               disabled={saving}
@@ -505,7 +538,7 @@ export function ExpenseForm({
                 : "Conferma e invia"}
             </button>
           )}
-          {inQueue && !isLastInQueue && expense.status === "draft" && (
+          {isDraft && inQueue && !isLastInQueue && (
             <button
               type="button"
               disabled={saving}
@@ -515,14 +548,16 @@ export function ExpenseForm({
               Salva e passa al prossimo
             </button>
           )}
-          <button
-            type="button"
-            disabled={saving}
-            onClick={cancel}
-            className="rounded-md border border-danger/40 px-4 py-2 text-sm font-medium text-danger transition hover:border-danger hover:bg-[#fde8e8] disabled:opacity-60"
-          >
-            {inQueue ? "Annulla questo" : "Annulla"}
-          </button>
+          {canCancelNote && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={cancel}
+              className="rounded-md border border-danger/40 px-4 py-2 text-sm font-medium text-danger transition hover:border-danger hover:bg-[#fde8e8] disabled:opacity-60"
+            >
+              {inQueue && isDraft ? "Annulla questo" : "Annulla nota spese"}
+            </button>
+          )}
           {isAdmin && expense.status === "submitted" && (
             <>
               <button

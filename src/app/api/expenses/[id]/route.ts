@@ -79,14 +79,13 @@ export async function PATCH(request: Request, { params }: Params) {
 
   try {
     const body = updateSchema.parse(await request.json());
+    const canApprove = canApproveExpense(user, {
+      userId: existing.userId,
+      user: existing.user,
+    });
 
     if (body.status && (body.status === "approved" || body.status === "rejected")) {
-      if (
-        !canApproveExpense(user, {
-          userId: existing.userId,
-          user: existing.user,
-        })
-      ) {
+      if (!canApprove) {
         return NextResponse.json(
           {
             error: isAdminIt(user.role)
@@ -98,6 +97,14 @@ export async function PATCH(request: Request, { params }: Params) {
           { status: 403 },
         );
       }
+    }
+
+    // Dipendente: dopo l'invio non può più modificare i campi
+    if (existing.status !== "draft" && !canApprove) {
+      return NextResponse.json(
+        { error: "Non puoi modificare una nota spesa già inserita" },
+        { status: 403 },
+      );
     }
 
     const nextTaxId =
@@ -188,8 +195,19 @@ export async function DELETE(_request: Request, { params }: Params) {
     return NextResponse.json({ error: "Nota spesa non trovata" }, { status: 404 });
   }
 
-  if (existing.status !== "draft" && !canViewAllExpenses(user.role)) {
-    return NextResponse.json({ error: "Puoi eliminare solo le bozze" }, { status: 400 });
+  const isOwner = existing.userId === user.id;
+  const isManagerViewer = canViewAllExpenses(user.role);
+
+  if (!isOwner && !isManagerViewer) {
+    return NextResponse.json({ error: "Operazione non consentita" }, { status: 403 });
+  }
+
+  // Il dipendente può annullare bozze, inviate o rifiutate — non quelle già approvate
+  if (isOwner && !isManagerViewer && existing.status === "approved") {
+    return NextResponse.json(
+      { error: "Non puoi annullare una nota spesa già approvata" },
+      { status: 400 },
+    );
   }
 
   await deleteUpload(existing.filePath);
