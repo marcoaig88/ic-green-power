@@ -105,77 +105,44 @@ export function MileageExpenseForm({
           Km da Google Maps · tariffa dal veicolo ACI assegnato (o default aziendale).
         </p>
         {vehicleLabel ? (
-          <div className="mt-4" aria-label={`Veicolo assegnato: ${vehicleLabel}`}>
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
-              Veicolo assegnato
-            </p>
-            <div className="mx-auto w-full max-w-[220px] sm:max-w-[240px]">
-              <svg
-                viewBox="0 0 420 180"
-                className="h-auto w-full drop-shadow-sm"
-                role="img"
-              >
-                <title>{vehicleLabel}</title>
-                <ellipse cx="210" cy="162" rx="150" ry="10" fill="rgba(20,40,28,0.08)" />
-                <path
-                  d="M48 118c8-28 28-46 58-54l22-28c10-12 24-18 40-18h84c18 0 32 8 42 22l28 40c28 6 52 22 60 42v8c0 8-6 14-14 14H62c-8 0-14-6-14-14v-12z"
-                  fill="#c8e6d0"
-                />
-                <path
-                  d="M130 78h108c12 0 22 5 30 14l16 22H112l18-26c4-6 10-10 18-10z"
-                  fill="#dff0e4"
-                />
-                <path d="M138 84h42l-10 28H128l10-28z" fill="#f4faf6" />
-                <path d="M188 84h52l8 28h-68l8-28z" fill="#eaf6ee" />
-                <path d="M248 84h28c6 0 12 3 16 8l8 20h-60l8-28z" fill="#f4faf6" />
-                <path
-                  d="M210 112v36"
-                  stroke="#7fad8f"
-                  strokeWidth="2"
-                  opacity="0.5"
-                />
-                <rect
-                  x="222"
-                  y="126"
-                  width="14"
-                  height="4"
-                  rx="2"
-                  fill="#7fad8f"
-                  opacity="0.7"
-                />
-                <ellipse cx="78" cy="120" rx="10" ry="7" fill="#f7e7a8" opacity="0.95" />
-                <ellipse cx="348" cy="122" rx="8" ry="6" fill="#ffffff" opacity="0.85" />
-                <circle cx="118" cy="148" r="22" fill="#5a6f60" />
-                <circle cx="118" cy="148" r="12" fill="#8a9c8e" />
-                <circle cx="118" cy="148" r="5" fill="#e8f2eb" />
-                <circle cx="302" cy="148" r="22" fill="#5a6f60" />
-                <circle cx="302" cy="148" r="12" fill="#8a9c8e" />
-                <circle cx="302" cy="148" r="5" fill="#e8f2eb" />
-                <rect
-                  x="148"
-                  y="118"
-                  width="124"
-                  height="28"
-                  rx="6"
-                  fill="#ffffff"
-                  stroke="#9fbfa8"
-                  strokeWidth="1.5"
-                />
-                <text
-                  x="210"
-                  y="136"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill="#144928"
-                  fontSize="11"
-                  fontWeight="800"
-                  fontFamily="var(--font-manrope), system-ui, sans-serif"
-                >
-                  {vehicleLabel.length > 28
-                    ? `${vehicleLabel.slice(0, 26)}…`
-                    : vehicleLabel}
-                </text>
-              </svg>
+          <div
+            className="mt-4 flex items-center gap-3"
+            aria-label={`Veicolo assegnato: ${vehicleLabel}`}
+          >
+            <svg
+              viewBox="0 0 420 160"
+              className="h-10 w-[4.5rem] shrink-0 drop-shadow-sm sm:h-11 sm:w-20"
+              role="img"
+              aria-hidden
+            >
+              <ellipse cx="210" cy="148" rx="140" ry="8" fill="rgba(20,40,28,0.08)" />
+              <path
+                d="M48 108c8-28 28-46 58-54l22-28c10-12 24-18 40-18h84c18 0 32 8 42 22l28 40c28 6 52 22 60 42v8c0 8-6 14-14 14H62c-8 0-14-6-14-14v-12z"
+                fill="#c8e6d0"
+              />
+              <path
+                d="M130 68h108c12 0 22 5 30 14l16 22H112l18-26c4-6 10-10 18-10z"
+                fill="#dff0e4"
+              />
+              <path d="M138 74h42l-10 28H128l10-28z" fill="#f4faf6" />
+              <path d="M188 74h52l8 28h-68l8-28z" fill="#eaf6ee" />
+              <path d="M248 74h28c6 0 12 3 16 8l8 20h-60l8-28z" fill="#f4faf6" />
+              <ellipse cx="78" cy="110" rx="10" ry="7" fill="#f7e7a8" opacity="0.95" />
+              <ellipse cx="348" cy="112" rx="8" ry="6" fill="#ffffff" opacity="0.85" />
+              <circle cx="118" cy="138" r="22" fill="#5a6f60" />
+              <circle cx="118" cy="138" r="12" fill="#8a9c8e" />
+              <circle cx="118" cy="138" r="5" fill="#e8f2eb" />
+              <circle cx="302" cy="138" r="22" fill="#5a6f60" />
+              <circle cx="302" cy="138" r="12" fill="#8a9c8e" />
+              <circle cx="302" cy="138" r="5" fill="#e8f2eb" />
+            </svg>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-muted">
+                Veicolo assegnato
+              </p>
+              <p className="mt-0.5 truncate text-sm font-semibold text-brand-deep">
+                {vehicleLabel}
+              </p>
             </div>
           </div>
         ) : (
