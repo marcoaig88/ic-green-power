@@ -89,6 +89,7 @@ export function UploadExpense() {
 
     const ids: string[] = [];
     const failures: string[] = [];
+    const aiErrors: Record<string, string> = {};
     let firstDuplicate: DuplicateInfo | null = null;
 
     try {
@@ -121,9 +122,9 @@ export function UploadExpense() {
           continue;
         }
 
-        let data: { expense?: { id: string } };
+        let data: { expense?: { id: string }; aiError?: string | null };
         try {
-          data = (await res.json()) as { expense?: { id: string } };
+          data = (await res.json()) as { expense?: { id: string }; aiError?: string | null };
         } catch {
           failures.push(`${files[i].name}: risposta server non valida`);
           continue;
@@ -134,11 +135,24 @@ export function UploadExpense() {
           continue;
         }
         ids.push(data.expense.id);
+        if (data.aiError) {
+          aiErrors[data.expense.id] = data.aiError;
+        }
       }
 
       if (ids.length === 0) {
         setDuplicate(firstDuplicate);
         throw new Error(failures[0] || "Nessun file caricato");
+      }
+
+      try {
+        if (Object.keys(aiErrors).length > 0) {
+          sessionStorage.setItem("icgp_ai_errors", JSON.stringify(aiErrors));
+        } else {
+          sessionStorage.removeItem("icgp_ai_errors");
+        }
+      } catch {
+        // sessionStorage non disponibile
       }
 
       router.push(`/expenses/review?ids=${ids.join(",")}`);

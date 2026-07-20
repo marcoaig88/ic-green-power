@@ -1,4 +1,4 @@
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
 const nullableNumber = z.preprocess((value) => {
@@ -80,7 +80,9 @@ const RESPONSE_SCHEMA = {
   ],
 };
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+/** Flash-Lite: veloce e adatto a OCR; 3.5-flash su Vercel può superare i 300s. */
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
+const EXTRACT_TIMEOUT_MS = 55_000;
 
 export async function extractReceiptFromFile(params: {
   buffer: Buffer;
@@ -99,31 +101,32 @@ export async function extractReceiptFromFile(params: {
   const ai = new GoogleGenAI({ apiKey });
   const base64 = params.buffer.toString("base64");
 
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: `${EXTRACTION_PROMPT}\n\nFile: ${params.fileName}` },
-          {
-            inlineData: {
-              mimeType: params.mimeType,
-              data: base64,
+  const response = await withTimeout(
+    ai.models.generateContent({
+      model: MODEL,
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: `${EXTRACTION_PROMPT}\n\nFile: ${params.fileName}` },
+            {
+              inlineData: {
+                mimeType: params.mimeType,
+                data: base64,
+              },
             },
-          },
-        ],
+          ],
+        },
+      ],
+      config: {
+        temperature: 0,
+        responseMimeType: "application/json",
+        responseSchema: RESPONSE_SCHEMA,
       },
-    ],
-    config: {
-      temperature: 0,
-      responseMimeType: "application/json",
-      responseSchema: RESPONSE_SCHEMA,
-      thinkingConfig: {
-        thinkingLevel: ThinkingLevel.MINIMAL,
-      },
-    },
-  });
+    }),
+    EXTRACT_TIMEOUT_MS,
+    "Estrazione AI scaduta (troppo lenta). Riprova con una foto più piccola o nitida.",
+  );
 
   const text = extractText(response);
   if (!text) {
@@ -136,6 +139,22 @@ export async function extractReceiptFromFile(params: {
   }
 
   return parseExtraction(text);
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
 
 function extractText(response: {

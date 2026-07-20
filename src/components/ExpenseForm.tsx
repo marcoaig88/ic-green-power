@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CATEGORY_LABELS, formatMoney } from "@/lib/format";
@@ -83,6 +83,7 @@ export function ExpenseForm({
   const [error, setError] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState<DuplicateInfo | null>(null);
   const [roundTrip, setRoundTrip] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(aiError || null);
   const [form, setForm] = useState({
     merchant: expense.merchant || "",
     amount: expense.amount?.toString() || "",
@@ -116,6 +117,30 @@ export function ExpenseForm({
   const inputClass = canEdit
     ? "w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
     : "w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink";
+
+  useEffect(() => {
+    if (aiError) {
+      setExtractionError(aiError);
+      return;
+    }
+    try {
+      const raw = sessionStorage.getItem("icgp_ai_errors");
+      if (!raw) return;
+      const map = JSON.parse(raw) as Record<string, string>;
+      const message = map[expense.id];
+      if (message) {
+        setExtractionError(message);
+        delete map[expense.id];
+        if (Object.keys(map).length === 0) {
+          sessionStorage.removeItem("icgp_ai_errors");
+        } else {
+          sessionStorage.setItem("icgp_ai_errors", JSON.stringify(map));
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [aiError, expense.id]);
 
   function goHome() {
     router.push(homeHref);
@@ -300,9 +325,9 @@ export function ExpenseForm({
               <span className="text-sm text-muted">Confidenza AI</span>
               <AiConfidenceBadge value={expense.aiConfidence} />
             </div>
-            {aiError && (
+            {extractionError && (
               <p className="rounded-md border border-warn/40 bg-[#fff8e8] px-3 py-2 text-sm text-warn">
-                Estrazione AI non riuscita: {aiError}. Compila i campi a mano.
+                Estrazione AI non riuscita: {extractionError}. Compila i campi a mano.
               </p>
             )}
           </>
