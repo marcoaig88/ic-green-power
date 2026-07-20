@@ -64,7 +64,8 @@ export default async function ExpenseReviewPage({ searchParams }: Props) {
       <ExpenseForm
         key={expense.id}
         homeHref={homePathForRole(user.role)}
-        isAdmin={canApproveExpense(user, {
+        viewerRole={user.role}
+        canApprove={canApproveExpense(user, {
           userId: expense.userId,
           user: expense.user,
         })}

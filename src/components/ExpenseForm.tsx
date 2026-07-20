@@ -10,6 +10,7 @@ import {
   isMileageExpense,
   mileageMerchant,
 } from "@/lib/mileage";
+import { canApproveExpenses } from "@/lib/roles";
 import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
 import { CalculateDistanceButton } from "@/components/CalculateDistanceButton";
 
@@ -56,13 +57,17 @@ function toDateInput(value: string | null) {
 
 export function ExpenseForm({
   expense,
-  isAdmin,
+  canApprove = false,
+  viewerRole,
   aiError,
   queue,
   homeHref = "/expenses",
 }: {
   expense: ExpenseFormValues;
-  isAdmin: boolean;
+  /** True solo se questo utente può approvare QUESTA nota (CFO/COO). */
+  canApprove?: boolean;
+  /** Ruolo dell'utente loggato — i dipendenti non vedono mai Approva/Rifiuta. */
+  viewerRole: string;
   aiError?: string | null;
   queue?: { ids: string[]; index: number } | null;
   /** Destinazione dopo conferma/approvazione (dashboard o elenco). */
@@ -95,15 +100,17 @@ export function ExpenseForm({
   const inQueue = Boolean(queue && queue.ids.length > 0);
   const isLastInQueue = inQueue && queue!.index >= queue!.ids.length - 1;
   const isDraft = expense.status === "draft";
+  const showApprovalActions =
+    canApproveExpenses(viewerRole) && canApprove && expense.status === "submitted";
   /** Bozza editabile; dopo l'invio solo chi può approvare può intervenire. */
-  const canEdit = isDraft || (isAdmin && expense.status === "submitted");
-  /** Dipendente che consulta una nota già inserita (sola lettura). */
-  const employeeLocked = !isDraft && !isAdmin;
+  const canEdit = isDraft || showApprovalActions;
+  /** Dipendente (o utente senza poteri di approvazione) su nota già inserita. */
+  const employeeLocked = !isDraft && !showApprovalActions;
   const canCancelNote =
     isDraft ||
     expense.status === "submitted" ||
     expense.status === "rejected" ||
-    (isAdmin && expense.status !== "approved");
+    (showApprovalActions && expense.status !== "approved");
   const inputClass = canEdit
     ? "w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
     : "w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink";
@@ -574,7 +581,7 @@ export function ExpenseForm({
               {inQueue && isDraft ? "Annulla questo" : "Annulla nota spese"}
             </button>
           )}
-          {isAdmin && expense.status === "submitted" && (
+          {showApprovalActions && (
             <>
               <button
                 type="button"
