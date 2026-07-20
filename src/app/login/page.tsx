@@ -2,12 +2,13 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { LoginPicker } from "@/components/LoginPicker";
+import { homePathForRole, isAdminIt, isManager } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
   const session = await getSessionUser();
-  if (session) redirect(session.role === "admin" ? "/admin" : "/expenses");
+  if (session) redirect(homePathForRole(session.role));
 
   try {
     const users = await prisma.user.findMany({
@@ -15,9 +16,13 @@ export default async function LoginPage() {
       orderBy: [{ role: "asc" }, { name: "asc" }],
     });
 
-    const sorted = [...users].sort((a, b) => {
-      if (a.role === b.role) return a.name.localeCompare(b.name, "it");
-      return a.role === "admin" ? -1 : 1;
+    // Admin IT non compare tra i profili selezionabili
+    const selectable = users.filter((u) => !isAdminIt(u.role));
+    const sorted = [...selectable].sort((a, b) => {
+      const rank = (role: string) => (isManager(role) ? 0 : 1);
+      const diff = rank(a.role) - rank(b.role);
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name, "it");
     });
 
     return (

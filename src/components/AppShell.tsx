@@ -2,6 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import {
+  canAccessAdminArea,
+  canManageUsers,
+  roleLabel,
+} from "@/lib/roles";
 
 type Props = {
   user: { name: string; email: string; role: string };
@@ -19,11 +24,11 @@ export function AppShell({ user, children }: Props) {
   }
 
   const nav = [
-    ...(user.role === "admin"
-      ? [
-          { href: "/admin", label: "Dashboard" },
-          { href: "/admin/team", label: "Dipendenti" },
-        ]
+    ...(canAccessAdminArea(user.role)
+      ? [{ href: "/admin", label: "Dashboard" }]
+      : []),
+    ...(canManageUsers(user.role)
+      ? [{ href: "/admin/team", label: "Dipendenti" }]
       : []),
     { href: "/expenses", label: "Note spese" },
     { href: "/expenses/new", label: "Nuova spesa" },
@@ -70,9 +75,7 @@ export function AppShell({ user, children }: Props) {
             </nav>
             <div className="text-right">
               <p className="font-semibold text-ink">{user.name}</p>
-              <p className="text-xs font-medium text-muted">
-                {user.role === "admin" ? "Admin" : "Dipendente"}
-              </p>
+              <p className="text-xs font-medium text-muted">{roleLabel(user.role)}</p>
             </div>
             <button
               type="button"

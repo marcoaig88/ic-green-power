@@ -6,7 +6,7 @@ App web per note spese con estrazione AI (Gemini) da scontrini foto/PDF.
 
 ## Funzionalità
 
-- Login per selezione profilo (admin / dipendenti)
+- Login per selezione profilo (Admin IT / Responsabile / dipendenti)
 - Upload scontrino → estrazione AI → conferma campi
 - Stati: bozza → inviata → approvata / rifiutata
 - File su Supabase Storage (privato, URL firmati)
@@ -53,7 +53,8 @@ Apri [http://localhost:3000](http://localhost:3000).
 
 | Nome | Email | Ruolo |
 |------|-------|--------|
-| Admin IC | admin@icgreenpower.it | admin |
+| Admin IT | utente `a` / password `b` (solo form, non in elenco) | admin_it |
+| Responsabile | responsabile@icgreenpower.it | responsabile |
 | Marco Rossi | marco@icgreenpower.it | employee |
 | Laura Bianchi | laura@icgreenpower.it | employee |
 | Giulia Verdi | giulia@icgreenpower.it | employee |

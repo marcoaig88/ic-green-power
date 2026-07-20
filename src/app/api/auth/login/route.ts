@@ -3,11 +3,12 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { setSession } from "@/lib/auth";
+import { isAdminIt } from "@/lib/roles";
 
 const bodySchema = z.union([
   z.object({ userId: z.string().min(1) }),
   z.object({
-    email: z.string().email(),
+    email: z.string().min(1),
     password: z.string().min(1),
   }),
 ]);
@@ -19,10 +20,20 @@ export async function POST(request: Request) {
     const user =
       "userId" in body
         ? await prisma.user.findUnique({ where: { id: body.userId } })
-        : await prisma.user.findUnique({ where: { email: body.email.toLowerCase() } });
+        : await prisma.user.findUnique({
+            where: { email: body.email.trim().toLowerCase() },
+          });
 
     if (!user) {
       return NextResponse.json({ error: "Utente non trovato" }, { status: 401 });
+    }
+
+    // Admin IT solo con utente e password
+    if ("userId" in body && isAdminIt(user.role)) {
+      return NextResponse.json(
+        { error: "Admin IT: accedi con utente e password" },
+        { status: 401 },
+      );
     }
 
     if ("password" in body) {

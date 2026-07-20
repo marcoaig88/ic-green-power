@@ -1,12 +1,15 @@
+import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TeamAdmin } from "@/components/TeamAdmin";
+import { canManageUsers } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminTeamPage() {
   const user = await getSessionUser();
   if (!user) return null;
+  if (!canManageUsers(user.role)) redirect("/admin");
 
   const users = await prisma.user.findMany({
     where: { role: "employee" },

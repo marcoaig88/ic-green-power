@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { AppShell } from "@/components/AppShell";
+import { canAccessAdminArea } from "@/lib/roles";
 
 export default async function AdminLayout({
   children,
@@ -9,7 +10,7 @@ export default async function AdminLayout({
 }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  if (user.role !== "admin") redirect("/expenses");
+  if (!canAccessAdminArea(user.role)) redirect("/expenses");
 
   return <AppShell user={user}>{children}</AppShell>;
 }

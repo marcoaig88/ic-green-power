@@ -12,7 +12,7 @@ model User {
   name             String
   email            String          @unique
   passwordHash     String
-  role             String          @default("employee") // employee | admin
+  role             String          @default("employee") // admin_it | responsabile | employee
   /// Veicolo personale per rimborso chilometrico (riga tabella ACI)
   aciVehicleRateId String?
   aciVehicleRate   AciVehicleRate? @relation(fields: [aciVehicleRateId], references: [id], onDelete: SetNull)

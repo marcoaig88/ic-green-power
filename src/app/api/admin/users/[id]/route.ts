@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canManageUsers } from "@/lib/roles";
 
 const patchSchema = z.object({
   name: z.string().trim().min(2).optional(),
@@ -16,8 +17,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   if (!session) {
     return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
   }
-  if (session.role !== "admin") {
-    return NextResponse.json({ error: "Solo admin" }, { status: 403 });
+  if (!canManageUsers(session.role)) {
+    return NextResponse.json(
+      { error: "Solo Admin IT può gestire gli utenti" },
+      { status: 403 },
+    );
   }
 
   const { id } = await params;

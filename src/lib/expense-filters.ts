@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { CATEGORY_LABELS, dayRangeFromInputs } from "@/lib/format";
+import { canViewAllExpenses } from "@/lib/roles";
 
 export const EXPENSE_STATUSES = ["draft", "submitted", "approved", "rejected"] as const;
 export const EXPENSE_CATEGORIES = Object.keys(CATEGORY_LABELS);
@@ -35,7 +36,7 @@ export function buildExpenseWhere(
 ): Prisma.ExpenseWhereInput {
   const andFilters: Prisma.ExpenseWhereInput[] = [];
 
-  if (options.role !== "admin") {
+  if (!canViewAllExpenses(options.role)) {
     andFilters.push({ userId: options.sessionUserId });
   } else if (filters.userId) {
     andFilters.push({ userId: filters.userId });

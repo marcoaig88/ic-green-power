@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ExpenseFilters } from "@/components/ExpenseFilters";
 import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
 import { QuickApproveButton } from "@/components/QuickApproveButton";
+import { canApproveExpenses, canViewAllExpenses } from "@/lib/roles";
 
 type Props = {
   searchParams: Promise<ExpenseFilterParams>;
@@ -26,6 +27,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
     role: user.role,
     sessionUserId: user.id,
   });
+  const manager = canViewAllExpenses(user.role);
+  const canApprove = canApproveExpenses(user.role);
 
   const [expenses, teamUsers] = await Promise.all([
     prisma.expense.findMany({
@@ -33,8 +36,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
       include: { user: { select: { name: true } } },
       orderBy: [{ expenseDate: "desc" }, { createdAt: "desc" }],
     }),
-    user.role === "admin"
+    manager
       ? prisma.user.findMany({
+          where: { role: "employee" },
           select: { id: true, name: true },
           orderBy: { name: "asc" },
         })
@@ -47,7 +51,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
         <div>
           <h1 className="brand-title brand-title--ink text-3xl sm:text-4xl">Note spese</h1>
           <p className="brand-subtitle brand-subtitle--ink mt-1 text-sm">
-            {user.role === "admin"
+            {manager
               ? "Tutte le spese del team"
               : "Le tue spese caricate e in lavorazione"}
           </p>
@@ -61,7 +65,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
       </div>
 
       <ExpenseFilters
-        isAdmin={user.role === "admin"}
+        isAdmin={manager}
         users={teamUsers}
         resultCount={expenses.length}
         values={filters}
@@ -92,14 +96,14 @@ export default async function ExpensesPage({ searchParams }: Props) {
               <tr>
                 <th className="px-4 py-3 font-medium">Data</th>
                 <th className="px-4 py-3 font-medium">Fornitore</th>
-                {user.role === "admin" && (
+                {manager && (
                   <th className="px-4 py-3 font-medium">Dipendente</th>
                 )}
                 <th className="px-4 py-3 font-medium">Categoria</th>
                 <th className="px-4 py-3 font-medium">Importo</th>
                 <th className="px-4 py-3 font-medium">AI</th>
                 <th className="px-4 py-3 font-medium">Stato</th>
-                {user.role === "admin" && (
+                {canApprove && (
                   <th className="px-4 py-3 font-medium">Azione</th>
                 )}
               </tr>
@@ -117,7 +121,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
                       {expense.merchant || "Da completare"}
                     </Link>
                   </td>
-                  {user.role === "admin" && (
+                  {manager && (
                     <td className="px-4 py-3 text-muted">{expense.user.name}</td>
                   )}
                   <td className="px-4 py-3 text-muted">
@@ -134,7 +138,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
                   <td className="px-4 py-3">
                     <StatusBadge status={expense.status} />
                   </td>
-                  {user.role === "admin" && (
+                  {canApprove && (
                     <td className="px-4 py-3">
                       {expense.status === "submitted" ? (
                         <QuickApproveButton expenseId={expense.id} />

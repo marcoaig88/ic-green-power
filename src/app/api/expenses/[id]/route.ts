@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { deleteUpload } from "@/lib/files";
+import { canApproveExpenses, canViewAllExpenses } from "@/lib/roles";
 
 const updateSchema = z.object({
   merchant: z.string().nullable().optional(),
@@ -30,7 +31,7 @@ async function getAccessibleExpense(id: string, userId: string, role: string) {
     include: { user: { select: { id: true, name: true, email: true } } },
   });
   if (!expense) return null;
-  if (role !== "admin" && expense.userId !== userId) return null;
+  if (!canViewAllExpenses(role) && expense.userId !== userId) return null;
   return expense;
 }
 
@@ -67,9 +68,9 @@ export async function PATCH(request: Request, { params }: Params) {
     if (
       body.status &&
       (body.status === "approved" || body.status === "rejected") &&
-      user.role !== "admin"
+      !canApproveExpenses(user.role)
     ) {
-      return NextResponse.json({ error: "Solo admin può approvare/rifiutare" }, { status: 403 });
+      return NextResponse.json({ error: "Solo responsabile/Admin IT può approvare/rifiutare" }, { status: 403 });
     }
 
     const expense = await prisma.expense.update({
@@ -121,7 +122,7 @@ export async function DELETE(_request: Request, { params }: Params) {
     return NextResponse.json({ error: "Nota spesa non trovata" }, { status: 404 });
   }
 
-  if (existing.status !== "draft" && user.role !== "admin") {
+  if (existing.status !== "draft" && !canViewAllExpenses(user.role)) {
     return NextResponse.json({ error: "Puoi eliminare solo le bozze" }, { status: 400 });
   }
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canManageUsers } from "@/lib/roles";
 
 const createSchema = z.object({
   name: z.string().trim().min(2),
@@ -11,17 +12,22 @@ const createSchema = z.object({
   aciVehicleRateId: z.string().min(1).nullable().optional(),
 });
 
-async function requireAdmin() {
+async function requireUserManager() {
   const user = await getSessionUser();
   if (!user) return { error: NextResponse.json({ error: "Non autenticato" }, { status: 401 }) };
-  if (user.role !== "admin") {
-    return { error: NextResponse.json({ error: "Solo admin" }, { status: 403 }) };
+  if (!canManageUsers(user.role)) {
+    return {
+      error: NextResponse.json(
+        { error: "Solo Admin IT può gestire gli utenti" },
+        { status: 403 },
+      ),
+    };
   }
   return { user };
 }
 
 export async function GET() {
-  const auth = await requireAdmin();
+  const auth = await requireUserManager();
   if (auth.error) return auth.error;
 
   const users = await prisma.user.findMany({
@@ -52,7 +58,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin();
+  const auth = await requireUserManager();
   if (auth.error) return auth.error;
 
   try {

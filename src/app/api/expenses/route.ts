@@ -12,6 +12,7 @@ import {
   calcMileageAmount,
   mileageMerchant,
 } from "@/lib/mileage";
+import { canViewAllExpenses } from "@/lib/roles";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -20,7 +21,7 @@ export async function GET() {
   }
 
   const expenses = await prisma.expense.findMany({
-    where: user.role === "admin" ? undefined : { userId: user.id },
+    where: canViewAllExpenses(user.role) ? undefined : { userId: user.id },
     include: {
       user: { select: { id: true, name: true, email: true } },
     },

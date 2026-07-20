@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
+import { homePathForRole } from "@/lib/roles";
 
 export default async function HomePage() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  redirect(user.role === "admin" ? "/admin" : "/expenses");
+  redirect(homePathForRole(user.role));
 }

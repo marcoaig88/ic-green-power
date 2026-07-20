@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { importAciCsv } from "@/lib/aci-import";
+import { canImportAci } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +11,8 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
   }
-  if (user.role !== "admin") {
-    return NextResponse.json({ error: "Solo admin" }, { status: 403 });
+  if (!canImportAci(user.role)) {
+    return NextResponse.json({ error: "Solo Admin IT" }, { status: 403 });
   }
 
   try {
@@ -58,8 +59,8 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
   }
-  if (user.role !== "admin") {
-    return NextResponse.json({ error: "Solo admin" }, { status: 403 });
+  if (!canImportAci(user.role)) {
+    return NextResponse.json({ error: "Solo Admin IT" }, { status: 403 });
   }
 
   const { prisma } = await import("@/lib/prisma");

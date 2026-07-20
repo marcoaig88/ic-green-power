@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ExpenseForm } from "@/components/ExpenseForm";
+import { canApproveExpenses, canViewAllExpenses } from "@/lib/roles";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -20,11 +21,11 @@ export default async function ExpenseDetailPage({ params, searchParams }: Props)
   });
 
   if (!expense) notFound();
-  if (user.role !== "admin" && expense.userId !== user.id) notFound();
+  if (!canViewAllExpenses(user.role) && expense.userId !== user.id) notFound();
 
   return (
     <ExpenseForm
-      isAdmin={user.role === "admin"}
+      isAdmin={canApproveExpenses(user.role)}
       aiError={aiError || null}
       expense={{
         id: expense.id,

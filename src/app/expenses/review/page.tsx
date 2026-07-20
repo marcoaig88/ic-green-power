@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ExpenseForm } from "@/components/ExpenseForm";
+import { canApproveExpenses, canViewAllExpenses } from "@/lib/roles";
 
 type Props = {
   searchParams: Promise<{ ids?: string; i?: string }>;
@@ -30,7 +31,7 @@ export default async function ExpenseReviewPage({ searchParams }: Props) {
     include: { user: { select: { name: true } } },
   });
 
-  if (!expense || (user.role !== "admin" && expense.userId !== user.id)) {
+  if (!expense || (!canViewAllExpenses(user.role) && expense.userId !== user.id)) {
     const remaining = ids.filter((id) => id !== currentId);
     if (remaining.length === 0) redirect("/expenses");
     redirect(`/expenses/review?ids=${remaining.join(",")}`);
@@ -55,7 +56,7 @@ export default async function ExpenseReviewPage({ searchParams }: Props) {
 
       <ExpenseForm
         key={expense.id}
-        isAdmin={user.role === "admin"}
+        isAdmin={canApproveExpenses(user.role)}
         queue={{ ids, index }}
         expense={{
           id: expense.id,

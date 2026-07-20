@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSignedFileUrl, readUpload } from "@/lib/files";
+import { canViewAllExpenses } from "@/lib/roles";
 
 type Params = { params: Promise<{ path: string[] }> };
 
@@ -27,7 +28,7 @@ export async function GET(_request: Request, { params }: Params) {
     return NextResponse.json({ error: "File non trovato" }, { status: 404 });
   }
 
-  if (user.role !== "admin" && expense.userId !== user.id) {
+  if (!canViewAllExpenses(user.role) && expense.userId !== user.id) {
     return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
   }
 
