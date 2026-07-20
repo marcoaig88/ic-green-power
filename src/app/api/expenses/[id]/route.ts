@@ -238,9 +238,14 @@ export async function DELETE(_request: Request, { params }: Params) {
     );
   }
 
-  if (existing.status === "approved") {
+  if (existing.status === "approved" || existing.status === "rejected") {
     return NextResponse.json(
-      { error: "Non puoi annullare una nota spesa già approvata" },
+      {
+        error:
+          existing.status === "rejected"
+            ? "Non puoi annullare una nota spesa rifiutata"
+            : "Non puoi annullare una nota spesa già approvata",
+      },
       { status: 400 },
     );
   }

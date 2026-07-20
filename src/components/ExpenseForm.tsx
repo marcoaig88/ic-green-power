@@ -113,10 +113,9 @@ export function ExpenseForm({
   const canEdit = isDraft || showApprovalActions;
   /** Dipendente (o utente senza poteri di approvazione) su nota già inserita. */
   const employeeLocked = !isDraft && !showApprovalActions;
-  /** Annulla solo sulle proprie note (non approvate). */
+  /** Annulla solo sulle proprie bozze o inviate (non approvate/rifiutate). */
   const canCancelNote =
-    isOwner &&
-    (isDraft || expense.status === "submitted" || expense.status === "rejected");
+    isOwner && (isDraft || expense.status === "submitted");
   const inputClass = canEdit
     ? "w-full rounded-md border border-line bg-white/80 px-3 py-2 outline-none ring-brand focus:ring-2"
     : "w-full rounded-md border border-line bg-bg-accent/60 px-3 py-2 text-ink";
