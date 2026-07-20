@@ -7,14 +7,14 @@ import { MileageExpenseForm } from "@/components/MileageExpenseForm";
 type Mode = "receipt" | "mileage";
 
 type Props = {
-  mileageRatePerKm: number;
+  companyRatePerKm: number | null;
   vehicleLabel: string | null;
   aciVehicleRateId: string | null;
   homeHref?: string;
 };
 
 export function NewExpenseClient({
-  mileageRatePerKm,
+  companyRatePerKm,
   vehicleLabel,
   aciVehicleRateId,
   homeHref = "/expenses",
@@ -59,7 +59,7 @@ export function NewExpenseClient({
         <UploadExpense />
       ) : (
         <MileageExpenseForm
-          ratePerKm={mileageRatePerKm}
+          companyRatePerKm={companyRatePerKm}
           vehicleLabel={vehicleLabel}
           aciVehicleRateId={aciVehicleRateId}
           homeHref={homeHref}

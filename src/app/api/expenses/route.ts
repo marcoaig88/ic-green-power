@@ -8,7 +8,7 @@ import {
   normalizeConfidence,
 } from "@/lib/extract-receipt";
 import {
-  DEFAULT_MILEAGE_RATE,
+  PRIVATE_MILEAGE_RATE,
   calcMileageAmount,
   mileageMerchant,
 } from "@/lib/mileage";
@@ -38,11 +38,11 @@ export async function GET() {
 
 const mileageSchema = z.object({
   type: z.literal("mileage"),
+  vehicleKind: z.enum(["company", "private"]).default("private"),
   expenseDate: z.string().min(1),
   routeFrom: z.string().min(1),
   routeTo: z.string().min(1),
   km: z.number().positive(),
-  ratePerKm: z.number().positive().optional(),
   description: z.string().nullable().optional(),
   submit: z.boolean().optional(),
 });
@@ -87,7 +87,27 @@ async function createMileageExpense(userId: string, raw: unknown) {
     },
   });
 
-  const ratePerKm = dbUser?.aciVehicleRate?.ratePerKm ?? DEFAULT_MILEAGE_RATE;
+  let ratePerKm: number;
+  let aciVehicleRateId: string | null = null;
+  let vehicleBrand: string | null = null;
+  let vehicleModel: string | null = null;
+
+  if (body.vehicleKind === "company") {
+    if (!dbUser?.aciVehicleRate) {
+      return NextResponse.json(
+        { error: "Nessun veicolo aziendale assegnato" },
+        { status: 400 },
+      );
+    }
+    ratePerKm = dbUser.aciVehicleRate.ratePerKm;
+    aciVehicleRateId = dbUser.aciVehicleRateId;
+    vehicleBrand = dbUser.aciVehicleRate.brand;
+    vehicleModel = dbUser.aciVehicleRate.model;
+  } else {
+    ratePerKm = PRIVATE_MILEAGE_RATE;
+    vehicleBrand = "Auto privata";
+  }
+
   const amount = calcMileageAmount(body.km, ratePerKm);
   if (amount == null || amount <= 0) {
     return NextResponse.json({ error: "Chilometri o tariffa non validi" }, { status: 400 });
@@ -106,9 +126,9 @@ async function createMileageExpense(userId: string, raw: unknown) {
       ratePerKm,
       routeFrom: body.routeFrom.trim(),
       routeTo: body.routeTo.trim(),
-      aciVehicleRateId: dbUser?.aciVehicleRateId || null,
-      vehicleBrand: dbUser?.aciVehicleRate?.brand || null,
-      vehicleModel: dbUser?.aciVehicleRate?.model || null,
+      aciVehicleRateId,
+      vehicleBrand,
+      vehicleModel,
       status: body.submit ? "submitted" : "draft",
     },
   });

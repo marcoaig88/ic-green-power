@@ -8,6 +8,7 @@ import {
   DEFAULT_MILEAGE_RATE,
   calcMileageAmount,
   isMileageExpense,
+  isPrivateMileageVehicle,
   mileageMerchant,
 } from "@/lib/mileage";
 import { canApproveExpenses } from "@/lib/roles";
@@ -30,6 +31,9 @@ export type ExpenseFormValues = {
   ratePerKm: number | null;
   routeFrom: string | null;
   routeTo: string | null;
+  aciVehicleRateId?: string | null;
+  vehicleBrand?: string | null;
+  vehicleModel?: string | null;
   status: string;
   rejectionReason: string | null;
   fileName: string | null;
@@ -375,6 +379,23 @@ export function ExpenseForm({
         <div className="grid gap-4 sm:grid-cols-2">
           {mileage ? (
             <>
+              <div className="col-span-full rounded-lg border border-line bg-bg-accent/40 px-3 py-2 text-sm">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  Veicolo
+                </span>
+                <p className="mt-0.5 font-semibold text-brand-deep">
+                  {isPrivateMileageVehicle(expense)
+                    ? "Auto privata"
+                    : [
+                        expense.vehicleBrand,
+                        expense.vehicleModel,
+                      ]
+                        .filter(Boolean)
+                        .join(" ") || "Auto aziendale (ACI)"}
+                  {" · "}
+                  {lockedRate.toFixed(4).replace(".", ",")} €/km
+                </p>
+              </div>
               <label className="block">
                 <span className="mb-1 block text-sm text-muted">Data viaggio</span>
                 <input

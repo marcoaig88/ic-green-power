@@ -2,7 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { calcMileageAmount } from "@/lib/mileage";
+import {
+  PRIVATE_MILEAGE_RATE,
+  calcMileageAmount,
+  type MileageVehicleKind,
+} from "@/lib/mileage";
 import { formatMoney } from "@/lib/format";
 import { CalculateDistanceButton } from "@/components/CalculateDistanceButton";
 
@@ -14,17 +18,54 @@ function formatRate(rate: number) {
   return rate.toFixed(4).replace(".", ",");
 }
 
+function CarIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 420 160"
+      className={className}
+      role="img"
+      aria-hidden
+    >
+      <ellipse cx="210" cy="148" rx="140" ry="8" fill="rgba(20,40,28,0.08)" />
+      <path
+        d="M48 108c8-28 28-46 58-54l22-28c10-12 24-18 40-18h84c18 0 32 8 42 22l28 40c28 6 52 22 60 42v8c0 8-6 14-14 14H62c-8 0-14-6-14-14v-12z"
+        fill="#c8e6d0"
+      />
+      <path
+        d="M130 68h108c12 0 22 5 30 14l16 22H112l18-26c4-6 10-10 18-10z"
+        fill="#dff0e4"
+      />
+      <path d="M138 74h42l-10 28H128l10-28z" fill="#f4faf6" />
+      <path d="M188 74h52l8 28h-68l8-28z" fill="#eaf6ee" />
+      <path d="M248 74h28c6 0 12 3 16 8l8 20h-60l8-28z" fill="#f4faf6" />
+      <ellipse cx="78" cy="110" rx="10" ry="7" fill="#f7e7a8" opacity="0.95" />
+      <ellipse cx="348" cy="112" rx="8" ry="6" fill="#ffffff" opacity="0.85" />
+      <circle cx="118" cy="138" r="22" fill="#5a6f60" />
+      <circle cx="118" cy="138" r="12" fill="#8a9c8e" />
+      <circle cx="118" cy="138" r="5" fill="#e8f2eb" />
+      <circle cx="302" cy="138" r="22" fill="#5a6f60" />
+      <circle cx="302" cy="138" r="12" fill="#8a9c8e" />
+      <circle cx="302" cy="138" r="5" fill="#e8f2eb" />
+    </svg>
+  );
+}
+
 export function MileageExpenseForm({
-  ratePerKm,
+  companyRatePerKm,
   vehicleLabel,
   homeHref = "/expenses",
 }: {
-  ratePerKm: number;
+  /** Tariffa ACI del veicolo aziendale assegnato (null se assente). */
+  companyRatePerKm: number | null;
   vehicleLabel: string | null;
   aciVehicleRateId?: string | null;
   homeHref?: string;
 }) {
   const router = useRouter();
+  const hasCompanyVehicle = companyRatePerKm != null && Boolean(vehicleLabel);
+  const [vehicleKind, setVehicleKind] = useState<MileageVehicleKind>(
+    hasCompanyVehicle ? "company" : "private",
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [roundTrip, setRoundTrip] = useState(false);
@@ -35,6 +76,11 @@ export function MileageExpenseForm({
     km: "",
     description: "",
   });
+
+  const ratePerKm =
+    vehicleKind === "company" && companyRatePerKm != null
+      ? companyRatePerKm
+      : PRIVATE_MILEAGE_RATE;
 
   const amount = useMemo(() => {
     const km = Number(form.km);
@@ -49,10 +95,19 @@ export function MileageExpenseForm({
     });
   }
 
+  function selectKind(kind: MileageVehicleKind) {
+    if (kind === "company" && !hasCompanyVehicle) return;
+    setVehicleKind(kind);
+    setError(null);
+  }
+
   async function submit(asSubmitted: boolean) {
     setSaving(true);
     setError(null);
     try {
+      if (vehicleKind === "company" && !hasCompanyVehicle) {
+        throw new Error("Nessun veicolo aziendale assegnato");
+      }
       const km = Number(form.km);
       if (!form.routeFrom.trim() || !form.routeTo.trim()) {
         throw new Error("Indica partenza e destinazione");
@@ -66,6 +121,7 @@ export function MileageExpenseForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "mileage",
+          vehicleKind,
           expenseDate: form.expenseDate,
           routeFrom: form.routeFrom.trim(),
           routeTo: form.routeTo.trim(),
@@ -102,56 +158,72 @@ export function MileageExpenseForm({
           Rimborso chilometrico
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Km da Google Maps · tariffa dal veicolo ACI assegnato (o default aziendale).
+          Scegli il veicolo, calcola i km con Google Maps e conferma.
         </p>
-        {vehicleLabel ? (
-          <div
-            className="mt-4 flex items-center gap-3"
-            aria-label={`Veicolo assegnato: ${vehicleLabel}`}
-          >
-            <svg
-              viewBox="0 0 420 160"
-              className="h-10 w-[4.5rem] shrink-0 drop-shadow-sm sm:h-11 sm:w-20"
-              role="img"
-              aria-hidden
-            >
-              <ellipse cx="210" cy="148" rx="140" ry="8" fill="rgba(20,40,28,0.08)" />
-              <path
-                d="M48 108c8-28 28-46 58-54l22-28c10-12 24-18 40-18h84c18 0 32 8 42 22l28 40c28 6 52 22 60 42v8c0 8-6 14-14 14H62c-8 0-14-6-14-14v-12z"
-                fill="#c8e6d0"
-              />
-              <path
-                d="M130 68h108c12 0 22 5 30 14l16 22H112l18-26c4-6 10-10 18-10z"
-                fill="#dff0e4"
-              />
-              <path d="M138 74h42l-10 28H128l10-28z" fill="#f4faf6" />
-              <path d="M188 74h52l8 28h-68l8-28z" fill="#eaf6ee" />
-              <path d="M248 74h28c6 0 12 3 16 8l8 20h-60l8-28z" fill="#f4faf6" />
-              <ellipse cx="78" cy="110" rx="10" ry="7" fill="#f7e7a8" opacity="0.95" />
-              <ellipse cx="348" cy="112" rx="8" ry="6" fill="#ffffff" opacity="0.85" />
-              <circle cx="118" cy="138" r="22" fill="#5a6f60" />
-              <circle cx="118" cy="138" r="12" fill="#8a9c8e" />
-              <circle cx="118" cy="138" r="5" fill="#e8f2eb" />
-              <circle cx="302" cy="138" r="22" fill="#5a6f60" />
-              <circle cx="302" cy="138" r="12" fill="#8a9c8e" />
-              <circle cx="302" cy="138" r="5" fill="#e8f2eb" />
-            </svg>
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-muted">
-                Veicolo assegnato
-              </p>
-              <p className="mt-0.5 truncate text-sm font-semibold text-brand-deep">
-                {vehicleLabel}
-              </p>
-            </div>
-          </div>
-        ) : (
-          <p className="mt-2 rounded-md border border-warn/30 bg-[#fff8e8] px-3 py-2 text-sm text-warn">
-            Nessun veicolo assegnato: viene usata la tariffa aziendale. Chiedi
-            all&apos;admin di associarti un&apos;auto.
-          </p>
-        )}
       </div>
+
+      <fieldset>
+        <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+          Veicolo
+        </legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            disabled={!hasCompanyVehicle}
+            onClick={() => selectKind("company")}
+            aria-pressed={vehicleKind === "company"}
+            className={`rounded-xl border px-4 py-3 text-left transition ${
+              vehicleKind === "company"
+                ? "border-brand bg-brand-soft/70 ring-2 ring-brand/40"
+                : hasCompanyVehicle
+                  ? "border-line bg-white hover:border-brand"
+                  : "cursor-not-allowed border-line/60 bg-bg-accent/40 opacity-70"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <CarIcon className="mt-0.5 h-9 w-[4.25rem] shrink-0 drop-shadow-sm" />
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-brand-deep">Auto aziendale</p>
+                {hasCompanyVehicle ? (
+                  <>
+                    <p className="mt-0.5 truncate text-xs font-semibold text-ink">
+                      {vehicleLabel}
+                    </p>
+                    <p className="mt-1 text-xs text-muted">
+                      Tariffa ACI · {formatRate(companyRatePerKm!)} €/km
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1 text-xs text-warn">
+                    Nessun veicolo assegnato. Chiedi all&apos;admin.
+                  </p>
+                )}
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => selectKind("private")}
+            aria-pressed={vehicleKind === "private"}
+            className={`rounded-xl border px-4 py-3 text-left transition ${
+              vehicleKind === "private"
+                ? "border-brand bg-brand-soft/70 ring-2 ring-brand/40"
+                : "border-line bg-white hover:border-brand"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <CarIcon className="mt-0.5 h-9 w-[4.25rem] shrink-0 drop-shadow-sm" />
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-brand-deep">Auto privata</p>
+                <p className="mt-0.5 text-xs text-muted">
+                  Tariffa fissa · {formatRate(PRIVATE_MILEAGE_RATE)} €/km
+                </p>
+              </div>
+            </div>
+          </button>
+        </div>
+      </fieldset>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="block col-span-full">
@@ -247,6 +319,9 @@ export function MileageExpenseForm({
         </p>
         <p className="mt-1 font-display text-2xl font-bold text-brand-deep">
           {amount != null ? formatMoney(amount) : "—"}
+        </p>
+        <p className="mt-1 text-xs text-muted">
+          {vehicleKind === "company" ? "Tariffa ACI veicolo aziendale" : "Tariffa auto privata"}
         </p>
       </div>
 
