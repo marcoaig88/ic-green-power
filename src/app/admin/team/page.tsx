@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TeamAdmin } from "@/components/TeamAdmin";
-import { canManageUsers } from "@/lib/roles";
+import { canManageUsers, teamUsersWhere } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -12,13 +12,14 @@ export default async function AdminTeamPage() {
   if (!canManageUsers(user.role)) redirect("/admin");
 
   const users = await prisma.user.findMany({
-    where: { role: "employee" },
+    where: teamUsersWhere,
     orderBy: [{ surname: "asc" }, { name: "asc" }],
     select: {
       id: true,
       name: true,
       surname: true,
       email: true,
+      role: true,
       aciVehicleRateId: true,
       aciVehicleRate: {
         select: {
@@ -38,7 +39,7 @@ export default async function AdminTeamPage() {
       <div>
         <h1 className="brand-title brand-title--ink text-3xl sm:text-4xl">Dipendenti</h1>
         <p className="brand-subtitle brand-subtitle--ink mt-1 text-sm">
-          Anagrafica team e veicolo ACI per i rimborsi chilometrici
+          Anagrafica team, ruoli e veicolo ACI per i rimborsi chilometrici
         </p>
       </div>
       <TeamAdmin initialUsers={users} />

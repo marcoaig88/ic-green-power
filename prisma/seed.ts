@@ -61,10 +61,16 @@ async function main() {
 
   const users = [
     {
-      name: "Responsabile",
-      surname: "HR",
-      email: "responsabile@icgreenpower.it",
-      role: ROLES.responsabile,
+      name: "Luca",
+      surname: "COO",
+      email: "coo@icgreenpower.it",
+      role: ROLES.coo,
+    },
+    {
+      name: "Sara",
+      surname: "CFO",
+      email: "cfo@icgreenpower.it",
+      role: ROLES.cfo,
     },
     {
       name: "Marco",
@@ -86,6 +92,12 @@ async function main() {
     },
   ];
 
+  // Migra eventuale ruolo legacy "responsabile" → COO
+  await prisma.user.updateMany({
+    where: { role: "responsabile" },
+    data: { role: ROLES.coo },
+  });
+
   for (const user of users) {
     await prisma.user.upsert({
       where: { email: user.email },
@@ -101,7 +113,7 @@ async function main() {
 
   console.log("Seed completato.");
   console.log("Admin IT: utente a / password b");
-  console.log("Altri: responsabile@icgreenpower.it / password123 (o selezione profilo)");
+  console.log("COO/CFO/dipendenti: coo@… / cfo@… / password123 (o selezione profilo)");
 }
 
 main()

@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { canManageUsers } from "@/lib/roles";
+import {
+  ASSIGNABLE_ROLES,
+  canManageUsers,
+  isTeamManagedRole,
+} from "@/lib/roles";
 import { hasNameSurnameClash } from "@/lib/user";
 
 const patchSchema = z.object({
   name: z.string().trim().min(1).optional(),
   surname: z.string().trim().min(1).optional(),
   email: z.string().trim().email().optional(),
+  role: z.enum(ASSIGNABLE_ROLES).optional(),
   aciVehicleRateId: z.string().min(1).nullable().optional(),
 });
 
@@ -31,8 +36,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const body = patchSchema.parse(await request.json());
     const existing = await prisma.user.findUnique({ where: { id } });
-    if (!existing || existing.role !== "employee") {
-      return NextResponse.json({ error: "Dipendente non trovato" }, { status: 404 });
+    if (!existing || !isTeamManagedRole(existing.role)) {
+      return NextResponse.json({ error: "Utente non trovato" }, { status: 404 });
     }
 
     if (body.email) {
@@ -72,6 +77,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         name: body.name,
         surname: body.surname,
         email: body.email?.toLowerCase(),
+        role: body.role,
         aciVehicleRateId:
           body.aciVehicleRateId === undefined ? undefined : body.aciVehicleRateId,
       },
@@ -80,6 +86,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         name: true,
         surname: true,
         email: true,
+        role: true,
         aciVehicleRateId: true,
         aciVehicleRate: {
           select: {

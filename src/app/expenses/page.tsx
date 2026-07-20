@@ -11,7 +11,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ExpenseFilters } from "@/components/ExpenseFilters";
 import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
 import { QuickApproveButton } from "@/components/QuickApproveButton";
-import { canApproveExpenses, canViewAllExpenses } from "@/lib/roles";
+import { canApproveExpenses, canViewAllExpenses, teamUsersWhere } from "@/lib/roles";
 import { fullName } from "@/lib/user";
 import { isMileageExpense } from "@/lib/mileage";
 
@@ -40,7 +40,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     }),
     manager
       ? prisma.user.findMany({
-          where: { role: "employee" },
+          where: teamUsersWhere,
           select: { id: true, name: true, surname: true },
           orderBy: [{ surname: "asc" }, { name: "asc" }],
         })

@@ -13,6 +13,7 @@ import { ExpenseFilters } from "@/components/ExpenseFilters";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { PendingApprovals } from "@/components/PendingApprovals";
 import { fullName } from "@/lib/user";
+import { teamUsersWhere } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -111,7 +112,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
       orderBy: { createdAt: "desc" },
     }),
     prisma.user.findMany({
-      where: { role: "employee" },
+      where: teamUsersWhere,
       select: { id: true, name: true, surname: true, email: true },
       orderBy: [{ surname: "asc" }, { name: "asc" }],
     }),

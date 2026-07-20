@@ -70,7 +70,7 @@ export async function PATCH(request: Request, { params }: Params) {
       (body.status === "approved" || body.status === "rejected") &&
       !canApproveExpenses(user.role)
     ) {
-      return NextResponse.json({ error: "Solo responsabile/Admin IT può approvare/rifiutare" }, { status: 403 });
+      return NextResponse.json({ error: "Solo COO/CFO/Admin IT può approvare/rifiutare" }, { status: 403 });
     }
 
     const expense = await prisma.expense.update({

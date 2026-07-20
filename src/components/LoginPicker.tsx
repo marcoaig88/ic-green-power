@@ -81,6 +81,8 @@ export function LoginPicker({ users }: { users: LoginUser[] }) {
   }
 
   const selectable = users.filter((u) => !isAdminIt(u.role));
+  const coos = selectable.filter((u) => u.role === ROLES.coo);
+  const cfos = selectable.filter((u) => u.role === ROLES.cfo);
   const responsabili = selectable.filter((u) => u.role === ROLES.responsabile);
   const employees = selectable.filter((u) => !isManager(u.role));
   const busy = loadingId != null || credLoading;
@@ -136,7 +138,10 @@ export function LoginPicker({ users }: { users: LoginUser[] }) {
         </button>
       </form>
 
-      {(responsabili.length > 0 || employees.length > 0) && (
+      {(coos.length > 0 ||
+        cfos.length > 0 ||
+        responsabili.length > 0 ||
+        employees.length > 0) && (
         <>
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-line" />
@@ -152,6 +157,26 @@ export function LoginPicker({ users }: { users: LoginUser[] }) {
               Seleziona il tuo profilo per entrare
             </p>
           </div>
+
+          {coos.length > 0 && (
+            <RoleSection
+              title="COO"
+              users={coos}
+              loadingId={loadingId}
+              disabled={busy}
+              onSelect={selectUser}
+            />
+          )}
+
+          {cfos.length > 0 && (
+            <RoleSection
+              title="CFO"
+              users={cfos}
+              loadingId={loadingId}
+              disabled={busy}
+              onSelect={selectUser}
+            />
+          )}
 
           {responsabili.length > 0 && (
             <RoleSection

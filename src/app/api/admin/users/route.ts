@@ -3,13 +3,19 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { canManageUsers } from "@/lib/roles";
+import {
+  ASSIGNABLE_ROLES,
+  canManageUsers,
+  isAssignableRole,
+  teamUsersWhere,
+} from "@/lib/roles";
 import { hasNameSurnameClash } from "@/lib/user";
 
 const createSchema = z.object({
   name: z.string().trim().min(1),
   surname: z.string().trim().min(1),
   email: z.string().trim().email(),
+  role: z.enum(ASSIGNABLE_ROLES),
   password: z.string().min(6).optional(),
   aciVehicleRateId: z.string().min(1).nullable().optional(),
 });
@@ -54,7 +60,7 @@ export async function GET() {
   if (auth.error) return auth.error;
 
   const users = await prisma.user.findMany({
-    where: { role: "employee" },
+    where: teamUsersWhere,
     orderBy: [{ surname: "asc" }, { name: "asc" }],
     select: userSelect,
   });
@@ -69,6 +75,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = createSchema.parse(await request.json());
     const email = body.email.toLowerCase();
+
+    if (!isAssignableRole(body.role)) {
+      return NextResponse.json({ error: "Ruolo non valido" }, { status: 400 });
+    }
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -98,7 +108,7 @@ export async function POST(request: NextRequest) {
         surname: body.surname,
         email,
         passwordHash,
-        role: "employee",
+        role: body.role,
         aciVehicleRateId: body.aciVehicleRateId || null,
       },
       select: userSelect,

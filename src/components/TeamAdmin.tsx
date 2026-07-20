@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import { fullName } from "@/lib/user";
 import {
+  ASSIGNABLE_ROLE_OPTIONS,
+  ROLES,
+  roleLabel,
+  type AssignableRole,
+  isAssignableRole,
+} from "@/lib/roles";
+import {
   AciVehiclePicker,
   type AciVehicleOption,
 } from "@/components/AciVehiclePicker";
@@ -14,6 +21,7 @@ export type TeamMember = {
   name: string;
   surname: string;
   email: string;
+  role: string;
   aciVehicleRateId: string | null;
   aciVehicleRate: {
     id: string;
@@ -25,18 +33,26 @@ export type TeamMember = {
   } | null;
 };
 
+function toAssignableRole(role: string): AssignableRole {
+  if (isAssignableRole(role)) return role;
+  if (role === ROLES.responsabile) return ROLES.coo;
+  return ROLES.employee;
+}
+
 export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
   const router = useRouter();
   const [users, setUsers] = useState(initialUsers);
   const [name, setName] = useState("");
   const [surname, setSurname] = useState("");
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState<AssignableRole>(ROLES.employee);
   const [vehicle, setVehicle] = useState<AciVehicleOption | null>(null);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editSurname, setEditSurname] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [editRole, setEditRole] = useState<AssignableRole>(ROLES.employee);
   const [editVehicle, setEditVehicle] = useState<AciVehicleOption | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -67,6 +83,7 @@ export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
           name,
           surname,
           email,
+          role,
           aciVehicleRateId: vehicle?.id || null,
         }),
       });
@@ -76,8 +93,9 @@ export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
       setName("");
       setSurname("");
       setEmail("");
+      setRole(ROLES.employee);
       setVehicle(null);
-      setMessage("Dipendente creato (password demo: password123).");
+      setMessage("Utente creato (password demo: password123).");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore");
@@ -91,6 +109,7 @@ export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
     setEditName(member.name);
     setEditSurname(member.surname);
     setEditEmail(member.email);
+    setEditRole(toAssignableRole(member.role));
     setEditVehicle(
       member.aciVehicleRate
         ? ({
@@ -114,6 +133,7 @@ export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
           name: editName,
           surname: editSurname,
           email: editEmail,
+          role: editRole,
           aciVehicleRateId: editVehicle?.id || null,
         }),
       });
@@ -124,7 +144,7 @@ export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
       );
       setEditingId(null);
       setEditVehicle(null);
-      setMessage("Dipendente aggiornato.");
+      setMessage("Utente aggiornato.");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore");
@@ -141,14 +161,14 @@ export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
       >
         <div>
           <h2 className="font-display text-lg font-bold text-brand-deep">
-            Nuovo dipendente
+            Nuovo utente
           </h2>
           <p className="mt-1 text-sm text-muted">
-            Crea l&apos;account e assegna l&apos;auto dalle tabelle ACI.
+            Crea l&apos;account, assegna il ruolo e il veicolo ACI.
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="block">
             <span className="mb-1 block text-xs font-semibold text-muted">Nome</span>
             <input
@@ -177,6 +197,21 @@ export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
               className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none ring-brand focus:ring-2"
             />
           </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-muted">Ruolo</span>
+            <select
+              required
+              value={role}
+              onChange={(e) => setRole(e.target.value as AssignableRole)}
+              className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none ring-brand focus:ring-2"
+            >
+              {ASSIGNABLE_ROLE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <AciVehiclePicker
@@ -190,7 +225,7 @@ export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
           disabled={saving}
           className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-deep disabled:opacity-60"
         >
-          {saving ? "Salvataggio…" : "Crea dipendente"}
+          {saving ? "Salvataggio…" : "Crea utente"}
         </button>
       </form>
 
@@ -202,17 +237,22 @@ export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
 
       <section className="rounded-xl border border-line bg-white/80 p-5">
         <h2 className="font-display text-lg font-bold text-brand-deep">
-          Dipendenti ({users.length})
+          Utenti ({users.length})
         </h2>
         <ul className="mt-4 divide-y divide-line/70">
           {users.length === 0 ? (
-            <li className="py-6 text-sm text-muted">Nessun dipendente ancora.</li>
+            <li className="py-6 text-sm text-muted">Nessun utente ancora.</li>
           ) : (
             users.map((member) => (
               <li key={member.id} className="py-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-ink">{fullName(member)}</p>
+                    <p className="font-semibold text-ink">
+                      {fullName(member)}{" "}
+                      <span className="ml-1 rounded-md bg-brand-soft px-2 py-0.5 text-xs font-bold text-brand-deep">
+                        {roleLabel(member.role)}
+                      </span>
+                    </p>
                     <p className="text-xs text-muted">{member.email}</p>
                     <p className="mt-1 text-sm text-muted">
                       {member.aciVehicleRate
@@ -238,7 +278,7 @@ export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
 
                 {editingId === member.id && (
                   <div className="mt-3 space-y-3">
-                    <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       <label className="block">
                         <span className="mb-1 block text-xs font-semibold text-muted">
                           Nome
@@ -272,6 +312,25 @@ export function TeamAdmin({ initialUsers }: { initialUsers: TeamMember[] }) {
                           onChange={(e) => setEditEmail(e.target.value)}
                           className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none ring-brand focus:ring-2"
                         />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold text-muted">
+                          Ruolo
+                        </span>
+                        <select
+                          required
+                          value={editRole}
+                          onChange={(e) =>
+                            setEditRole(e.target.value as AssignableRole)
+                          }
+                          className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none ring-brand focus:ring-2"
+                        >
+                          {ASSIGNABLE_ROLE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
                       </label>
                     </div>
                     <AciVehiclePicker
