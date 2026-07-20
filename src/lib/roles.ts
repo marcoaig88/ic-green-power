@@ -111,15 +111,26 @@ type ExpenseOwner = { userId: string; user?: { role?: string | null } | null };
 
 /**
  * Visibilità lista note spese:
- * - Admin IT / CFO → tutte
- * - COO → spese del CFO + proprie
+ * - Admin IT / CFO → tutte tranne bozze altrui (le "da completare" restano solo al proprietario)
+ * - COO → spese del CFO (non bozze) + proprie
  * - Dipendente → solo proprie
  */
 export function expenseListWhere(session: SessionActor): Prisma.ExpenseWhereInput {
-  if (isAdminIt(session.role) || isCfo(session.role)) return {};
+  if (isAdminIt(session.role) || isCfo(session.role)) {
+    return {
+      OR: [{ status: { not: "draft" } }, { userId: session.id }],
+    };
+  }
   if (isCoo(session.role)) {
     return {
-      OR: [{ user: { role: ROLES.cfo } }, { userId: session.id }],
+      AND: [
+        {
+          OR: [{ user: { role: ROLES.cfo } }, { userId: session.id }],
+        },
+        {
+          OR: [{ status: { not: "draft" } }, { userId: session.id }],
+        },
+      ],
     };
   }
   return { userId: session.id };
@@ -127,12 +138,14 @@ export function expenseListWhere(session: SessionActor): Prisma.ExpenseWhereInpu
 
 /**
  * Visibilità dashboard:
- * - COO → solo spese del CFO
+ * - COO → solo spese del CFO già inviate (niente bozze da completare)
  * - altrimenti come lista
  */
 export function expenseDashboardWhere(session: SessionActor): Prisma.ExpenseWhereInput {
   if (isCoo(session.role)) {
-    return { user: { role: ROLES.cfo } };
+    return {
+      AND: [{ user: { role: ROLES.cfo } }, { status: { not: "draft" } }],
+    };
   }
   return expenseListWhere(session);
 }

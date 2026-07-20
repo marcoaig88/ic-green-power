@@ -91,7 +91,7 @@ export function PendingApprovals({
                   href={`/expenses/${expense.id}`}
                   className="font-semibold text-ink hover:text-brand"
                 >
-                  {expense.merchant || "Da completare"}
+                  {expense.merchant || "Senza fornitore"}
                 </Link>
                 <p className="text-xs text-muted">
                   {expense.user.name} ·{" "}

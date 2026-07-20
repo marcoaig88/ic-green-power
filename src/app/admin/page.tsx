@@ -85,7 +85,13 @@ export default async function AdminDashboardPage() {
     }),
     prisma.expense.findMany({
       where: {
-        AND: [where, { status: "submitted" }],
+        AND: [
+          where,
+          { status: "submitted" },
+          // Esclude note incomplete (etichetta "Da completare")
+          { merchant: { not: null } },
+          { amount: { not: null } },
+        ],
       },
       select: {
         id: true,
