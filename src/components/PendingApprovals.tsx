@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { formatDate, formatMoney } from "@/lib/format";
+import { isMileageExpense } from "@/lib/mileage";
 import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 
@@ -15,6 +16,8 @@ export type PendingExpense = {
   expenseDate: string | Date | null;
   createdAt: string | Date;
   aiConfidence: number | null;
+  category?: string | null;
+  km?: number | null;
   user: { name: string };
   status: string;
 };
@@ -61,40 +64,43 @@ export function PendingApprovals({ expenses }: { expenses: PendingExpense[] }) {
         </p>
       )}
       <ul className="divide-y divide-line/70">
-        {items.map((expense) => (
-          <li
-            key={expense.id}
-            className="flex flex-wrap items-center justify-between gap-3 py-3"
-          >
-            <div className="min-w-0">
-              <Link
-                href={`/expenses/${expense.id}`}
-                className="font-semibold text-ink hover:text-brand"
-              >
-                {expense.merchant || "Da completare"}
-              </Link>
-              <p className="text-xs text-muted">
-                {expense.user.name} ·{" "}
-                {formatDate(expense.expenseDate || expense.createdAt)}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <AiConfidenceBadge value={expense.aiConfidence} />
-              <span className="font-medium">
-                {formatMoney(expense.amount, expense.currency)}
-              </span>
-              <StatusBadge status={expense.status} />
-              <button
-                type="button"
-                disabled={busyId === expense.id}
-                onClick={() => approve(expense.id)}
-                className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-deep disabled:opacity-60"
-              >
-                {busyId === expense.id ? "…" : "Approva"}
-              </button>
-            </div>
-          </li>
-        ))}
+        {items.map((expense) => {
+          const mileage = isMileageExpense(expense);
+          return (
+            <li
+              key={expense.id}
+              className="flex flex-wrap items-center justify-between gap-3 py-3"
+            >
+              <div className="min-w-0">
+                <Link
+                  href={`/expenses/${expense.id}`}
+                  className="font-semibold text-ink hover:text-brand"
+                >
+                  {expense.merchant || "Da completare"}
+                </Link>
+                <p className="text-xs text-muted">
+                  {expense.user.name} ·{" "}
+                  {formatDate(expense.expenseDate || expense.createdAt)}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                {!mileage && <AiConfidenceBadge value={expense.aiConfidence} />}
+                <span className="font-medium">
+                  {formatMoney(expense.amount, expense.currency)}
+                </span>
+                <StatusBadge status={expense.status} />
+                <button
+                  type="button"
+                  disabled={busyId === expense.id}
+                  onClick={() => approve(expense.id)}
+                  className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-deep disabled:opacity-60"
+                >
+                  {busyId === expense.id ? "…" : "Approva"}
+                </button>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

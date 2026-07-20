@@ -13,6 +13,7 @@ import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
 import { QuickApproveButton } from "@/components/QuickApproveButton";
 import { canApproveExpenses, canViewAllExpenses } from "@/lib/roles";
 import { fullName } from "@/lib/user";
+import { isMileageExpense } from "@/lib/mileage";
 
 type Props = {
   searchParams: Promise<ExpenseFilterParams>;
@@ -136,7 +137,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
                     {formatMoney(expense.amount, expense.currency)}
                   </td>
                   <td className="px-4 py-3">
-                    <AiConfidenceBadge value={expense.aiConfidence} />
+                    {isMileageExpense(expense) ? (
+                      <span className="text-xs text-muted">—</span>
+                    ) : (
+                      <AiConfidenceBadge value={expense.aiConfidence} />
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={expense.status} />

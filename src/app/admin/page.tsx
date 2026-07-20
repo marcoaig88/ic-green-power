@@ -103,6 +103,8 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         expenseDate: true,
         createdAt: true,
         aiConfidence: true,
+        category: true,
+        km: true,
         status: true,
         user: { select: { name: true, surname: true } },
       },
