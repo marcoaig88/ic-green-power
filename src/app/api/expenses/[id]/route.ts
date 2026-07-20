@@ -6,7 +6,6 @@ import { deleteUpload } from "@/lib/files";
 import {
   canAccessExpense,
   canApproveExpense,
-  canViewAllExpenses,
   isAdminIt,
   isManager,
 } from "@/lib/roles";
