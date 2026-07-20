@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { AppShell } from "@/components/AppShell";
-import { canAccessAdminArea } from "@/lib/roles";
+import { canAccessAdminArea, canApproveExpenses } from "@/lib/roles";
+import { countApprovablePending } from "@/lib/pending-approvals";
 
 export default async function AdminLayout({
   children,
@@ -12,5 +13,13 @@ export default async function AdminLayout({
   if (!user) redirect("/login");
   if (!canAccessAdminArea(user.role)) redirect("/expenses");
 
-  return <AppShell user={user}>{children}</AppShell>;
+  const pendingApprovalsCount = canApproveExpenses(user.role)
+    ? await countApprovablePending({ id: user.id, role: user.role })
+    : 0;
+
+  return (
+    <AppShell user={user} pendingApprovalsCount={pendingApprovalsCount}>
+      {children}
+    </AppShell>
+  );
 }

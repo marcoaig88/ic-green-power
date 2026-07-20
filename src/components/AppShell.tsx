@@ -4,12 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   canAccessAdminArea,
+  canApproveExpenses,
   canManageUsers,
   roleLabel,
 } from "@/lib/roles";
 
 type Props = {
   user: { name: string; email: string; role: string };
+  /** Badge Attività: note da approvare. */
+  pendingApprovalsCount?: number;
   children: React.ReactNode;
 };
 
@@ -22,7 +25,7 @@ function initials(name: string) {
     .join("");
 }
 
-export function AppShell({ user, children }: Props) {
+export function AppShell({ user, pendingApprovalsCount = 0, children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -35,6 +38,9 @@ export function AppShell({ user, children }: Props) {
   const nav = [
     ...(canAccessAdminArea(user.role)
       ? [{ href: "/admin", label: "Dashboard" }]
+      : []),
+    ...(canApproveExpenses(user.role)
+      ? [{ href: "/admin/attivita", label: "Attività", badge: pendingApprovalsCount }]
       : []),
     ...(canManageUsers(user.role)
       ? [{ href: "/admin/team", label: "Dipendenti" }]
@@ -103,18 +109,33 @@ export function AppShell({ user, children }: Props) {
           >
             {nav.map((item) => {
               const active = isActive(item.href);
+              const badge =
+                "badge" in item && typeof item.badge === "number" && item.badge > 0
+                  ? item.badge
+                  : null;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`rounded-xl px-3.5 py-2 text-sm font-bold transition ${
+                  className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-bold transition ${
                     active
                       ? "border border-brand bg-brand !text-white shadow-sm hover:!text-white"
                       : "border border-line bg-white text-ink hover:border-brand hover:bg-brand-soft/60 hover:text-brand-deep"
                   }`}
                 >
                   {item.label}
+                  {badge != null && (
+                    <span
+                      className={`inline-flex min-w-[1.25rem] items-center justify-center rounded-md px-1.5 py-0.5 text-[11px] font-extrabold leading-none ${
+                        active
+                          ? "bg-white/25 text-white"
+                          : "bg-brand text-white"
+                      }`}
+                    >
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}
