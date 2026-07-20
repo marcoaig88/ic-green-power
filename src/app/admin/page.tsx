@@ -148,7 +148,6 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   const exportHref = exportParams
     ? `/api/expenses/export?${exportParams}`
     : "/api/expenses/export";
-  const expensesListHref = exportParams ? `/expenses?${exportParams}` : "/expenses";
   const pendingListParams = expenseFiltersToSearchParams({
     ...filters,
     status: "submitted",
@@ -166,26 +165,12 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
               : `Panoramica note spese · ${monthLabel}`}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <a
-            href={exportHref}
-            className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-semibold text-ink hover:border-brand"
-          >
-            Esporta CSV
-          </a>
-          <Link
-            href={pendingListHref}
-            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-deep"
-          >
-            Da approvare ({pendingCount})
-          </Link>
-          <Link
-            href={expensesListHref}
-            className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-semibold text-ink hover:border-brand"
-          >
-            Tutte le spese
-          </Link>
-        </div>
+        <a
+          href={exportHref}
+          className="rounded-md border border-line bg-white/80 px-4 py-2 text-sm font-semibold text-ink hover:border-brand"
+        >
+          Esporta CSV
+        </a>
       </div>
 
       <ExpenseFilters
