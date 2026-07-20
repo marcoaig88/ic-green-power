@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CATEGORY_LABELS, formatMoney } from "@/lib/format";
 import {
@@ -36,6 +37,12 @@ export type ExpenseFormValues = {
   user?: { name: string };
 };
 
+type DuplicateInfo = {
+  id: string;
+  createdAtLabel: string;
+  statusLabel: string;
+};
+
 function toDateInput(value: string | null) {
   if (!value) return "";
   const iso = value.slice(0, 10);
@@ -63,6 +70,7 @@ export function ExpenseForm({
   const lockedRate = expense.ratePerKm ?? DEFAULT_MILEAGE_RATE;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicate, setDuplicate] = useState<DuplicateInfo | null>(null);
   const [roundTrip, setRoundTrip] = useState(false);
   const [form, setForm] = useState({
     merchant: expense.merchant || "",
@@ -134,6 +142,7 @@ export function ExpenseForm({
   async function save(options?: { status?: string; advance?: boolean }) {
     setSaving(true);
     setError(null);
+    setDuplicate(null);
     try {
       const res = await fetch(`/api/expenses/${expense.id}`, {
         method: "PATCH",
@@ -157,7 +166,16 @@ export function ExpenseForm({
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Salvataggio non riuscito");
+      if (!res.ok) {
+        if (data.duplicate?.id) {
+          setDuplicate({
+            id: data.duplicate.id,
+            createdAtLabel: data.duplicate.createdAtLabel,
+            statusLabel: data.duplicate.statusLabel,
+          });
+        }
+        throw new Error(data.error || "Salvataggio non riuscito");
+      }
 
       if (options?.status === "submitted" || options?.advance) {
         if (inQueue) {
@@ -432,7 +450,22 @@ export function ExpenseForm({
           )}
         </div>
 
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {error && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p>{error}</p>
+            {duplicate && (
+              <p className="mt-2">
+                <Link
+                  href={`/expenses/${duplicate.id}`}
+                  className="font-semibold underline hover:text-red-900"
+                >
+                  Apri la nota già inserita il {duplicate.createdAtLabel} (
+                  {duplicate.statusLabel}) →
+                </Link>
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-3 pt-2">
           {!(inQueue && !isLastInQueue && expense.status === "draft") && (

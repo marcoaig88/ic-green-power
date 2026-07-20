@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { saveUpload } from "@/lib/files";
+import { saveUpload, deleteUpload } from "@/lib/files";
 import {
   extractReceiptFromFile,
   normalizeConfidence,
@@ -13,6 +13,11 @@ import {
   mileageMerchant,
 } from "@/lib/mileage";
 import { expenseListWhere } from "@/lib/roles";
+import {
+  duplicateExpenseMessage,
+  findDuplicateExpense,
+  normalizeTaxId,
+} from "@/lib/expense-duplicates";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -150,19 +155,39 @@ async function createReceiptExpense(userId: string, form: FormData) {
     console.error("AI extraction failed:", error);
   }
 
+  const expenseDate = parseExpenseDate(extraction?.expenseDate);
+  const amount = extraction?.amount ?? null;
+  const taxId = normalizeTaxId(extraction?.taxId) || null;
+
+  const duplicate = await findDuplicateExpense({
+    taxId,
+    amount,
+    expenseDate,
+  });
+  if (duplicate) {
+    await deleteUpload(saved.relativePath);
+    return NextResponse.json(
+      {
+        error: duplicateExpenseMessage(duplicate),
+        duplicate,
+      },
+      { status: 409 },
+    );
+  }
+
   const expense = await prisma.expense.create({
     data: {
       userId,
       merchant: extraction?.merchant ?? null,
-      amount: extraction?.amount ?? null,
+      amount,
       currency: extraction?.currency ?? "EUR",
-      expenseDate: parseExpenseDate(extraction?.expenseDate),
+      expenseDate,
       vatAmount: extraction?.vatAmount ?? null,
       vatRate: extraction?.vatRate ?? null,
       category: extraction?.category ?? null,
       description: extraction?.description ?? null,
       documentNumber: extraction?.documentNumber ?? null,
-      taxId: extraction?.taxId ?? null,
+      taxId,
       aiRawJson: extraction ? JSON.stringify(extraction) : null,
       aiConfidence: normalizeConfidence(extraction?.confidence),
       fileName: saved.originalName,

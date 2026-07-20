@@ -10,6 +10,11 @@ import {
   isAdminIt,
   isManager,
 } from "@/lib/roles";
+import {
+  duplicateExpenseMessage,
+  findDuplicateExpense,
+  normalizeTaxId,
+} from "@/lib/expense-duplicates";
 
 const updateSchema = z.object({
   merchant: z.string().nullable().optional(),
@@ -95,6 +100,39 @@ export async function PATCH(request: Request, { params }: Params) {
       }
     }
 
+    const nextTaxId =
+      body.taxId !== undefined
+        ? normalizeTaxId(body.taxId) || null
+        : normalizeTaxId(existing.taxId) || null;
+    const nextAmount =
+      body.amount !== undefined ? body.amount : existing.amount;
+    const nextDate =
+      body.expenseDate !== undefined
+        ? body.expenseDate
+          ? new Date(
+              body.expenseDate.includes("T")
+                ? body.expenseDate
+                : `${body.expenseDate}T12:00:00.000Z`,
+            )
+          : null
+        : existing.expenseDate;
+
+    const duplicate = await findDuplicateExpense({
+      taxId: nextTaxId,
+      amount: nextAmount,
+      expenseDate: nextDate,
+      excludeId: id,
+    });
+    if (duplicate) {
+      return NextResponse.json(
+        {
+          error: duplicateExpenseMessage(duplicate),
+          duplicate,
+        },
+        { status: 409 },
+      );
+    }
+
     const expense = await prisma.expense.update({
       where: { id },
       data: {
@@ -105,14 +143,18 @@ export async function PATCH(request: Request, { params }: Params) {
           body.expenseDate === undefined
             ? undefined
             : body.expenseDate
-              ? new Date(body.expenseDate)
+              ? new Date(
+                  body.expenseDate.includes("T")
+                    ? body.expenseDate
+                    : `${body.expenseDate}T12:00:00.000Z`,
+                )
               : null,
         vatAmount: body.vatAmount,
         vatRate: body.vatRate,
         category: body.category,
         description: body.description,
         documentNumber: body.documentNumber,
-        taxId: body.taxId,
+        taxId: body.taxId !== undefined ? nextTaxId : undefined,
         km: body.km,
         ratePerKm: body.ratePerKm,
         routeFrom: body.routeFrom,

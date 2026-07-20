@@ -1,16 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import {
   MAX_UPLOAD_BYTES,
   isAllowedReceiptMime,
   prepareReceiptFile,
-  readApiError,
+  readApiErrorPayload,
   resolveFileMime,
 } from "@/lib/receipt-upload";
 
 const MAX_FILES = 15;
+
+type DuplicateInfo = {
+  id: string;
+  createdAtLabel: string;
+  statusLabel: string;
+};
 
 export function UploadExpense() {
   const router = useRouter();
@@ -22,6 +29,7 @@ export function UploadExpense() {
   );
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicate, setDuplicate] = useState<DuplicateInfo | null>(null);
 
   function addFiles(list: FileList | File[] | null | undefined) {
     if (!list) return;
@@ -60,6 +68,7 @@ export function UploadExpense() {
 
     setFiles(next);
     setError(problems[0] || null);
+    setDuplicate(null);
   }
 
   function removeFile(index: number) {
@@ -75,10 +84,12 @@ export function UploadExpense() {
 
     setLoading(true);
     setError(null);
+    setDuplicate(null);
     setProgress({ current: 0, total: files.length });
 
     const ids: string[] = [];
     const failures: string[] = [];
+    let firstDuplicate: DuplicateInfo | null = null;
 
     try {
       for (let i = 0; i < files.length; i++) {
@@ -98,7 +109,15 @@ export function UploadExpense() {
         const res = await fetch("/api/expenses", { method: "POST", body });
 
         if (!res.ok) {
-          failures.push(`${files[i].name}: ${await readApiError(res)}`);
+          const payload = await readApiErrorPayload(res);
+          failures.push(`${files[i].name}: ${payload.message}`);
+          if (!firstDuplicate && payload.duplicate?.id) {
+            firstDuplicate = {
+              id: payload.duplicate.id,
+              createdAtLabel: payload.duplicate.createdAtLabel,
+              statusLabel: payload.duplicate.statusLabel,
+            };
+          }
           continue;
         }
 
@@ -118,6 +137,7 @@ export function UploadExpense() {
       }
 
       if (ids.length === 0) {
+        setDuplicate(firstDuplicate);
         throw new Error(failures[0] || "Nessun file caricato");
       }
 
@@ -219,7 +239,22 @@ export function UploadExpense() {
         </ul>
       )}
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p>{error}</p>
+          {duplicate && (
+            <p className="mt-2">
+              <Link
+                href={`/expenses/${duplicate.id}`}
+                className="font-semibold underline hover:text-red-900"
+              >
+                Apri la nota già inserita il {duplicate.createdAtLabel} (
+                {duplicate.statusLabel}) →
+              </Link>
+            </p>
+          )}
+        </div>
+      )}
 
       <button
         type="submit"

@@ -108,20 +108,44 @@ export async function prepareReceiptFile(file: File): Promise<File> {
 }
 
 export async function readApiError(res: Response): Promise<string> {
+  const parsed = await readApiErrorPayload(res);
+  return parsed.message;
+}
+
+export async function readApiErrorPayload(res: Response): Promise<{
+  message: string;
+  duplicate?: {
+    id: string;
+    createdAtLabel: string;
+    statusLabel: string;
+  };
+}> {
   const text = await res.text();
   try {
-    const data = JSON.parse(text) as { error?: string };
-    if (data.error) return data.error;
+    const data = JSON.parse(text) as {
+      error?: string;
+      duplicate?: {
+        id: string;
+        createdAtLabel: string;
+        statusLabel: string;
+      };
+    };
+    if (data.error) {
+      return { message: data.error, duplicate: data.duplicate };
+    }
   } catch {
     // risposta non JSON (es. 413 HTML di Vercel)
   }
 
   if (res.status === 413) {
-    return "File troppo grande per il server (max ~4MB). Riprova con una foto più piccola.";
+    return {
+      message:
+        "File troppo grande per il server (max ~4MB). Riprova con una foto più piccola.",
+    };
   }
   if (res.status >= 500) {
-    return "Errore del server durante il caricamento. Riprova tra poco.";
+    return { message: "Errore del server durante il caricamento. Riprova tra poco." };
   }
-  if (!text) return `Errore di caricamento (${res.status})`;
-  return text.slice(0, 160);
+  if (!text) return { message: `Errore di caricamento (${res.status})` };
+  return { message: text.slice(0, 160) };
 }
