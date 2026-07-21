@@ -1,7 +1,10 @@
 "use client";
 
 import {
+  Bar,
+  BarChart,
   CartesianGrid,
+  Cell,
   Legend,
   Line,
   LineChart,
@@ -23,15 +26,32 @@ const CATEGORY_COLORS = [
   "#6b7c70",
 ];
 
+const EMPLOYEE_COLORS = [
+  "#1f6b3a",
+  "#0f766e",
+  "#b45309",
+  "#1d4ed8",
+  "#6b7c70",
+  "#854d0e",
+  "#166534",
+  "#0e7490",
+];
+
 export type MonthCategoryPoint = {
   label: string;
-  /** totali per chiave categoria (label IT) */
   [categoryLabel: string]: string | number;
+};
+
+export type EmployeePoint = {
+  name: string;
+  total: number;
+  count: number;
 };
 
 type Props = {
   byMonthCategory: MonthCategoryPoint[];
   categoryKeys: string[];
+  byEmployee: EmployeePoint[];
 };
 
 function euro(value: number) {
@@ -42,28 +62,99 @@ function euro(value: number) {
   }).format(value);
 }
 
-export function DashboardCharts({ byMonthCategory, categoryKeys }: Props) {
-  const empty =
+function ChartShell({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-line bg-white/80 p-5">
+      <div>
+        <h2 className="font-display text-lg font-bold text-brand-deep">{title}</h2>
+        <p className="mt-0.5 text-xs text-muted">{hint}</p>
+      </div>
+      <div className="mt-4 h-72 w-full">{children}</div>
+    </section>
+  );
+}
+
+function Empty() {
+  return (
+    <div className="flex h-full items-center justify-center text-sm text-muted">
+      Nessun dato nel periodo.
+    </div>
+  );
+}
+
+export function DashboardCharts({
+  byMonthCategory,
+  categoryKeys,
+  byEmployee,
+}: Props) {
+  const categoryEmpty =
     categoryKeys.length === 0 ||
     byMonthCategory.every((row) =>
       categoryKeys.every((key) => Number(row[key] || 0) === 0),
     );
+  const employeeEmpty = byEmployee.length === 0;
 
   return (
-    <section className="rounded-xl border border-line bg-white/80 p-5">
-      <div>
-        <h2 className="font-display text-lg font-bold text-brand-deep">
-          Andamento mensile per categoria
-        </h2>
-        <p className="mt-0.5 text-xs text-muted">
-          Top 4 categorie del periodo · data caricamento · inviate e approvate
-        </p>
-      </div>
-      <div className="mt-4 h-72 w-full">
-        {empty ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted">
-            Nessun dato nel periodo.
-          </div>
+    <div className="grid gap-6 lg:grid-cols-2">
+      <ChartShell
+        title="Totale mese per dipendente"
+        hint="Mese corrente · data caricamento · inviate e approvate"
+      >
+        {employeeEmpty ? (
+          <Empty />
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              layout="vertical"
+              data={byEmployee}
+              margin={{ top: 4, right: 16, left: 4, bottom: 4 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5ebe7" horizontal={false} />
+              <XAxis
+                type="number"
+                tick={{ fill: MUTED, fontSize: 11 }}
+                tickFormatter={(v) => euro(Number(v))}
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={110}
+                tick={{ fill: MUTED, fontSize: 11 }}
+              />
+              <Tooltip
+                formatter={(value, _name, item) => [
+                  `${euro(Number(value ?? 0))} · ${Number(item?.payload?.count ?? 0)} note`,
+                  "Totale",
+                ]}
+                labelStyle={{ color: BRAND_DEEP }}
+              />
+              <Bar dataKey="total" name="Totale" radius={[0, 6, 6, 0]} barSize={18}>
+                {byEmployee.map((entry, index) => (
+                  <Cell
+                    key={entry.name}
+                    fill={EMPLOYEE_COLORS[index % EMPLOYEE_COLORS.length]}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </ChartShell>
+
+      <ChartShell
+        title="Andamento mensile per categoria"
+        hint="Top 4 categorie del periodo · data caricamento · inviate e approvate"
+      >
+        {categoryEmpty ? (
+          <Empty />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
@@ -97,7 +188,7 @@ export function DashboardCharts({ byMonthCategory, categoryKeys }: Props) {
             </LineChart>
           </ResponsiveContainer>
         )}
-      </div>
-    </section>
+      </ChartShell>
+    </div>
   );
 }

@@ -14,6 +14,7 @@ import {
   loadPendingExpenses,
   pendingForDaApprovareKpi,
 } from "@/lib/pending-approvals";
+import { fullName } from "@/lib/user";
 
 export const dynamic = "force-dynamic";
 
@@ -121,6 +122,34 @@ function buildMonthCategorySeries(
   return { byMonthCategory, categoryKeys };
 }
 
+/** Totale mese corrente per dipendente (inviate + approvate, data caricamento). */
+function buildByEmployeeMonth(
+  expenses: {
+    amount: number | null;
+    status: string;
+    createdAt: Date;
+    user: { name: string; surname?: string | null };
+  }[],
+  monthStart: Date,
+) {
+  const eligible = expenses.filter(
+    (e) =>
+      e.createdAt >= monthStart &&
+      (e.status === "submitted" || e.status === "approved"),
+  );
+
+  const map = new Map<string, { name: string; total: number; count: number }>();
+  for (const expense of eligible) {
+    const name = fullName(expense.user) || "Senza nome";
+    const row = map.get(name) || { name, total: 0, count: 0 };
+    row.total += expense.amount || 0;
+    row.count += 1;
+    map.set(name, row);
+  }
+
+  return [...map.values()].sort((a, b) => b.total - a.total);
+}
+
 export default async function AdminDashboardPage() {
   const user = await getSessionUser();
   if (!user) return null;
@@ -159,6 +188,7 @@ export default async function AdminDashboardPage() {
   );
 
   const { byMonthCategory, categoryKeys } = buildMonthCategorySeries(allExpenses);
+  const byEmployee = buildByEmployeeMonth(allExpenses, monthStart);
   const monthApproved = sumAmounts(
     monthExpenses.filter((e) => e.status === "approved"),
   );
@@ -230,6 +260,7 @@ export default async function AdminDashboardPage() {
       <DashboardCharts
         byMonthCategory={byMonthCategory}
         categoryKeys={categoryKeys}
+        byEmployee={byEmployee}
       />
     </div>
   );

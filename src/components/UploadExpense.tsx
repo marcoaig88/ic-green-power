@@ -169,7 +169,7 @@ export function UploadExpense() {
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-xl space-y-6" noValidate>
       <p className="text-sm text-muted">
-        Puoi caricare più scontrini insieme: Gemini estrae i dati e poi li confermi uno per uno.
+        Puoi caricare più note spese insieme: AI estrae i dati e poi li confermi uno per uno.
         Le foto grandi vengono compresse automaticamente.
       </p>
 
