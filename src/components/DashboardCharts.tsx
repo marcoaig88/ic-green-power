@@ -113,21 +113,22 @@ export function DashboardCharts({
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              layout="vertical"
               data={byEmployee}
-              margin={{ top: 4, right: 16, left: 4, bottom: 4 }}
+              margin={{ top: 8, right: 12, left: 0, bottom: 48 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5ebe7" horizontal={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5ebe7" />
               <XAxis
-                type="number"
+                dataKey="name"
                 tick={{ fill: MUTED, fontSize: 11 }}
-                tickFormatter={(v) => euro(Number(v))}
+                interval={0}
+                angle={-28}
+                textAnchor="end"
+                height={56}
               />
               <YAxis
-                type="category"
-                dataKey="name"
-                width={110}
                 tick={{ fill: MUTED, fontSize: 11 }}
+                tickFormatter={(v) => euro(Number(v))}
+                width={64}
               />
               <Tooltip
                 formatter={(value, _name, item) => [
@@ -136,7 +137,7 @@ export function DashboardCharts({
                 ]}
                 labelStyle={{ color: BRAND_DEEP }}
               />
-              <Bar dataKey="total" name="Totale" radius={[0, 6, 6, 0]} barSize={18}>
+              <Bar dataKey="total" name="Totale" radius={[6, 6, 0, 0]} barSize={28}>
                 {byEmployee.map((entry, index) => (
                   <Cell
                     key={entry.name}
