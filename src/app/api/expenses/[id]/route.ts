@@ -14,6 +14,8 @@ import {
   findDuplicateExpense,
   normalizeTaxId,
 } from "@/lib/expense-duplicates";
+import { receiptSubmitError } from "@/lib/expense-validation";
+import { isMileageExpense } from "@/lib/mileage";
 
 const updateSchema = z.object({
   merchant: z.string().nullable().optional(),
@@ -129,6 +131,10 @@ export async function PATCH(request: Request, { params }: Params) {
         : normalizeTaxId(existing.taxId) || null;
     const nextAmount =
       body.amount !== undefined ? body.amount : existing.amount;
+    const nextMerchant =
+      body.merchant !== undefined ? body.merchant : existing.merchant;
+    const nextCategory =
+      body.category !== undefined ? body.category : existing.category;
     const nextDate =
       body.expenseDate !== undefined
         ? body.expenseDate
@@ -139,6 +145,26 @@ export async function PATCH(request: Request, { params }: Params) {
             )
           : null
         : existing.expenseDate;
+
+    if (body.status === "submitted") {
+      const mileage = isMileageExpense({
+        category: nextCategory,
+        km: body.km !== undefined ? body.km : existing.km,
+        filePath: existing.filePath,
+      });
+      if (!mileage) {
+        const missing = receiptSubmitError({
+          merchant: nextMerchant,
+          amount: nextAmount,
+          expenseDate: nextDate,
+          category: nextCategory,
+          taxId: nextTaxId,
+        });
+        if (missing) {
+          return NextResponse.json({ error: missing }, { status: 400 });
+        }
+      }
+    }
 
     // In approvazione/rifiuto non rieseguire il controllo duplicati sui campi
     if (body.status !== "approved" && body.status !== "rejected") {

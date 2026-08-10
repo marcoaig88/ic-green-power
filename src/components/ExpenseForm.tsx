@@ -11,6 +11,7 @@ import {
   isPrivateMileageVehicle,
   mileageMerchant,
 } from "@/lib/mileage";
+import { receiptSubmitError } from "@/lib/expense-validation";
 import { canApproveExpenses } from "@/lib/roles";
 import { AiConfidenceBadge } from "@/components/AiConfidenceBadge";
 import { CalculateDistanceButton } from "@/components/CalculateDistanceButton";
@@ -217,6 +218,21 @@ export function ExpenseForm({
     if (!canEdit && options?.status !== "approved" && options?.status !== "rejected") {
       return;
     }
+
+    if (options?.status === "submitted" && !mileage) {
+      const missing = receiptSubmitError({
+        merchant: form.merchant,
+        amount: form.amount ? Number(form.amount) : null,
+        expenseDate: form.expenseDate,
+        category: form.category,
+        taxId: form.taxId,
+      });
+      if (missing) {
+        setError(missing);
+        return;
+      }
+    }
+
     setSaving(true);
     setError(null);
     setDuplicate(null);
@@ -516,20 +532,26 @@ export function ExpenseForm({
           ) : (
             <>
               <label className="block sm:col-span-2">
-                <span className="mb-1 block text-sm text-muted">Fornitore</span>
+                <span className="mb-1 block text-sm text-muted">
+                  Fornitore <span className="text-danger">*</span>
+                </span>
                 <input
                   readOnly={!canEdit}
+                  required={isDraft}
                   className={inputClass}
                   value={form.merchant}
                   onChange={(e) => update("merchant", e.target.value)}
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm text-muted">Importo</span>
+                <span className="mb-1 block text-sm text-muted">
+                  Importo <span className="text-danger">*</span>
+                </span>
                 <input
                   type="number"
                   step="0.01"
                   readOnly={!canEdit}
+                  required={isDraft}
                   className={inputClass}
                   value={form.amount}
                   onChange={(e) => update("amount", e.target.value)}
@@ -545,19 +567,25 @@ export function ExpenseForm({
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm text-muted">Data</span>
+                <span className="mb-1 block text-sm text-muted">
+                  Data <span className="text-danger">*</span>
+                </span>
                 <input
                   type="date"
                   readOnly={!canEdit}
+                  required={isDraft}
                   className={inputClass}
                   value={form.expenseDate}
                   onChange={(e) => update("expenseDate", e.target.value)}
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm text-muted">Categoria</span>
+                <span className="mb-1 block text-sm text-muted">
+                  Categoria <span className="text-danger">*</span>
+                </span>
                 <select
                   disabled={!canEdit}
+                  required={isDraft}
                   className={inputClass}
                   value={form.category}
                   onChange={(e) => update("category", e.target.value)}
@@ -601,9 +629,12 @@ export function ExpenseForm({
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm text-muted">P.IVA / Codice fiscale</span>
+                <span className="mb-1 block text-sm text-muted">
+                  P.IVA / Codice fiscale <span className="text-danger">*</span>
+                </span>
                 <input
                   readOnly={!canEdit}
+                  required={isDraft}
                   className={inputClass}
                   value={form.taxId}
                   onChange={(e) => update("taxId", e.target.value)}
