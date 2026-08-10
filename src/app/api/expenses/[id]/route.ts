@@ -135,6 +135,10 @@ export async function PATCH(request: Request, { params }: Params) {
       body.merchant !== undefined ? body.merchant : existing.merchant;
     const nextCategory =
       body.category !== undefined ? body.category : existing.category;
+    const nextDocumentNumber =
+      body.documentNumber !== undefined
+        ? body.documentNumber
+        : existing.documentNumber;
     const nextDate =
       body.expenseDate !== undefined
         ? body.expenseDate
@@ -159,6 +163,7 @@ export async function PATCH(request: Request, { params }: Params) {
           expenseDate: nextDate,
           category: nextCategory,
           taxId: nextTaxId,
+          documentNumber: nextDocumentNumber,
         });
         if (missing) {
           return NextResponse.json({ error: missing }, { status: 400 });

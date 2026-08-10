@@ -226,6 +226,7 @@ export function ExpenseForm({
         expenseDate: form.expenseDate,
         category: form.category,
         taxId: form.taxId,
+        documentNumber: form.documentNumber,
       });
       if (missing) {
         setError(missing);
@@ -620,9 +621,12 @@ export function ExpenseForm({
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm text-muted">N. documento</span>
+                <span className="mb-1 block text-sm text-muted">
+                  N. documento <span className="text-danger">*</span>
+                </span>
                 <input
                   readOnly={!canEdit}
+                  required={isDraft}
                   className={inputClass}
                   value={form.documentNumber}
                   onChange={(e) => update("documentNumber", e.target.value)}

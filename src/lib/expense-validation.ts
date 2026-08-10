@@ -6,6 +6,7 @@ type ReceiptFields = {
   expenseDate?: string | Date | null;
   category?: string | null;
   taxId?: string | null;
+  documentNumber?: string | null;
 };
 
 /**
@@ -30,5 +31,6 @@ export function receiptSubmitError(fields: ReceiptFields): string | null {
   if (!normalizeTaxId(fields.taxId)) {
     return "Indica la P.IVA o il codice fiscale";
   }
+  if (!fields.documentNumber?.trim()) return "Indica il numero documento";
   return null;
 }
