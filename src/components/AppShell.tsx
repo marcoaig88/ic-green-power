@@ -8,6 +8,7 @@ import {
   canManageUsers,
   roleLabel,
 } from "@/lib/roles";
+import { InstallAppHint } from "@/components/InstallAppHint";
 
 type Props = {
   user: { name: string; email: string; role: string };
@@ -136,6 +137,7 @@ export function AppShell({ user, pendingApprovalsCount = 0, children }: Props) {
           </nav>
         </div>
       </header>
+      <InstallAppHint />
       <main className="flex-1 pb-10">{children}</main>
     </div>
   );

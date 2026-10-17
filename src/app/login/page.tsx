@@ -2,6 +2,7 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { LoginPicker } from "@/components/LoginPicker";
+import { InstallAppHint } from "@/components/InstallAppHint";
 import { homePathForRole, isAdminIt, isManager } from "@/lib/roles";
 import { fullName } from "@/lib/user";
 
@@ -42,6 +43,7 @@ export default async function LoginPage() {
           </p>
         </div>
 
+        <InstallAppHint />
         <LoginPicker users={sorted} />
       </div>
     );

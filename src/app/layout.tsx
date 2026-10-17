@@ -17,6 +17,30 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "IC Green Power · Note spese",
   description: "Registrazione note spese con estrazione AI da scontrini",
+  applicationName: "ICGP Spese",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "ICGP Spese",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
+};
+
+export const viewport = {
+  themeColor: "#1f6b3a",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover" as const,
 };
 
 export default function RootLayout({
